@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  db:
+    image: ankane/pgvector
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: legaldb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db_schema.sql:/docker-entrypoint-initdb.d/db_schema.sql:ro
+
+  app:
+    build: .
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/legaldb
+      - LLM_BACKEND=ollama
+      - LLM_URL=http://host.docker.internal:11434
+    volumes:
+      - ./:/app
+
+volumes:
+  pgdata:
