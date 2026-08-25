@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+httpx
+psycopg2-binary
+asyncpg
+pgvector
+sentence-transformers
+torch
+transformers
+sse-starlette
+rank_bm25
+python-dotenv
+pydantic
+aiofiles
