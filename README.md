@@ -33,6 +33,26 @@ AI-Law-Agent/
 
 ---
 
+## Windows 간편 설치 (배포판)
+
+릴리즈된 패키지가 GitHub Releases에 존재할 경우, 아래 한 줄로 설치할 수 있습니다.
+
+1. [`setup.bat`](./setup.bat) 파일을 다운로드합니다.
+2. 파일을 더블클릭하거나 명령 프롬프트에서 실행합니다.
+
+```bat
+setup.bat
+```
+
+스크립트가 자동으로:
+- GitHub Releases에서 최신 `AI-Law-Agent-win.zip` 아티팩트를 다운로드
+- `%USERPROFILE%\AI-Law-Agent` 경로에 압축 해제
+- `AI-Law-Agent.exe` 실행
+
+> **릴리즈 ZIP 이름 또는 설치 경로를 변경**하려면 `setup.bat` 상단의 `ASSET_NAME` / `INSTALL_DIR` 변수를 수정하세요.
+
+---
+
 ## 데스크톱 앱 실행 (개발)
 
 ### 사전 요구 사항
