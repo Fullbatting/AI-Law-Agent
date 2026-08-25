@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:* http://localhost:*;" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Law Agent</title>
+  <style>
+    /* ── Reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif; background: #0f1117; color: #e0e0e0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Layout ── */
+    #app { display: flex; flex: 1; overflow: hidden; }
+    nav { width: 200px; background: #1a1d27; display: flex; flex-direction: column; padding: 20px 0; border-right: 1px solid #2a2d3a; flex-shrink: 0; }
+    nav h1 { font-size: 14px; font-weight: 700; color: #7c8cf8; padding: 0 16px 20px; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #2a2d3a; margin-bottom: 8px; }
+    nav button { background: none; border: none; color: #9ca3af; cursor: pointer; padding: 10px 16px; text-align: left; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s; border-radius: 0; }
+    nav button:hover { background: #252836; color: #e0e0e0; }
+    nav button.active { background: #252836; color: #7c8cf8; border-right: 2px solid #7c8cf8; }
+    main { flex: 1; overflow-y: auto; padding: 24px; }
+    .page { display: none; animation: fadein 0.2s; }
+    .page.visible { display: block; }
+    @keyframes fadein { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+    /* ── Status bar ── */
+    #statusBar { background: #1a1d27; border-top: 1px solid #2a2d3a; padding: 6px 16px; font-size: 12px; display: flex; align-items: center; gap: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot.green { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    .dot.red   { background: #f87171; }
+    .dot.grey  { background: #6b7280; }
+
+    /* ── Cards / sections ── */
+    h2 { font-size: 18px; font-weight: 600; margin-bottom: 16px; color: #c7d2fe; }
+    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+    .card p { color: #9ca3af; font-size: 13px; margin-bottom: 12px; line-height: 1.6; }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 500; transition: filter 0.15s; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #7c8cf8; color: #fff; }
+    .btn-primary:hover:not(:disabled) { filter: brightness(1.1); }
+    .btn-danger  { background: #ef4444; color: #fff; }
+    .btn-danger:hover:not(:disabled)  { filter: brightness(1.1); }
+    .btn-ghost   { background: #252836; color: #e0e0e0; border: 1px solid #3a3d4a; }
+    .btn-ghost:hover:not(:disabled)   { background: #2e3146; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* ── Form ── */
+    label { display: block; font-size: 13px; color: #9ca3af; margin-bottom: 4px; }
+    input[type="text"], input[type="number"] {
+      width: 100%; padding: 8px 10px; background: #0f1117; border: 1px solid #3a3d4a;
+      border-radius: 6px; color: #e0e0e0; font-size: 14px; outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus { border-color: #7c8cf8; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { margin-bottom: 0; }
+
+    /* ── Log console ── */
+    #logConsole { background: #0a0c13; border: 1px solid #2a2d3a; border-radius: 8px; padding: 12px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; color: #a3e635; white-space: pre-wrap; word-break: break-all; }
+
+    /* ── Query UI ── */
+    #queryInput { width: 100%; padding: 10px 14px; background: #0f1117; border: 1px solid #3a3d4a; border-radius: 8px; color: #e0e0e0; font-size: 14px; outline: none; resize: vertical; min-height: 80px; }
+    #queryInput:focus { border-color: #7c8cf8; }
+    #answerBox { background: #0a0c13; border: 1px solid #2a2d3a; border-radius: 8px; padding: 16px; min-height: 120px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; color: #e0e0e0; margin-top: 16px; }
+    #answerBox.streaming { border-color: #7c8cf8; }
+
+    /* ── Health checks ── */
+    .check-list { list-style: none; }
+    .check-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #2a2d3a; font-size: 14px; }
+    .check-list li:last-child { border-bottom: none; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 600; }
+    .badge-ok  { background: #14532d; color: #4ade80; }
+    .badge-err { background: #450a0a; color: #f87171; }
+    .badge-pend { background: #1e1b4b; color: #818cf8; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <nav>
+    <h1>⚖️ AI Law</h1>
+    <button class="active" data-page="dashboard">🖥 대시보드</button>
+    <button data-page="query">💬 질문하기</button>
+    <button data-page="index">📂 색인 관리</button>
+    <button data-page="settings">⚙️ 설정</button>
+    <button data-page="logs">📋 로그</button>
+  </nav>
+  <main>
+
+    <!-- DASHBOARD PAGE -->
+    <div class="page visible" id="page-dashboard">
+      <h2>서버 제어판</h2>
+      <div class="card">
+        <p>Python FastAPI 백엔드 서버를 시작하거나 중지합니다.</p>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btnStart">▶ 서버 시작</button>
+          <button class="btn btn-danger"  id="btnStop" disabled>■ 서버 중지</button>
+          <button class="btn btn-ghost"   id="btnHealth">🔍 상태 확인</button>
+        </div>
+      </div>
+      <div class="card" id="healthCard">
+        <p>상태 점검 항목</p>
+        <ul class="check-list" id="healthList">
+          <li><span>백엔드 서버</span> <span class="badge badge-pend" id="hBackend">대기 중</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- QUERY PAGE -->
+    <div class="page" id="page-query">
+      <h2>법률 질의</h2>
+      <div class="card">
+        <p>질문을 입력하고 전송 버튼을 누르세요. 응답이 스트리밍됩니다.</p>
+        <textarea id="queryInput" placeholder="예: 임대차 계약 해지 조건은?"></textarea>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn btn-primary" id="btnQuery">전송</button>
+          <button class="btn btn-ghost"   id="btnClear">지우기</button>
+        </div>
+        <div id="answerBox">응답이 여기에 표시됩니다.</div>
+      </div>
+    </div>
+
+    <!-- INDEX PAGE -->
+    <div class="page" id="page-index">
+      <h2>색인 관리</h2>
+      <div class="card">
+        <p>문서를 벡터 데이터베이스에 색인합니다. 기본적으로 sample_legal.json 파일을 사용합니다.</p>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>데이터 소스 경로 (비워두면 sample_legal.json 사용)</label>
+          <input type="text" id="indexSource" placeholder="sample_legal.json 또는 절대 경로" />
+        </div>
+        <button class="btn btn-primary" id="btnIndex">색인 시작</button>
+      </div>
+      <div class="card">
+        <label style="margin-bottom:8px">색인 출력</label>
+        <div id="indexLog" style="background:#0a0c13;border:1px solid #2a2d3a;border-radius:8px;padding:12px;height:200px;overflow-y:auto;font-family:monospace;font-size:12px;color:#a3e635;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <h2>환경 설정</h2>
+      <div class="card">
+        <p>설정은 앱 데이터 폴더에 저장됩니다. 서버를 재시작하면 반영됩니다.</p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>API 포트</label>
+            <input type="number" id="cfgPort" value="8000" min="1024" max="65535" />
+          </div>
+          <div class="form-group">
+            <label>LLM 백엔드</label>
+            <input type="text" id="cfgLlmBackend" placeholder="ollama" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>DATABASE_URL</label>
+            <input type="text" id="cfgDbUrl" placeholder="postgresql://localhost:5432/legaldb" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>LLM_URL</label>
+            <input type="text" id="cfgLlmUrl" placeholder="http://localhost:11434" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>EMBEDDING_MODEL</label>
+            <input type="text" id="cfgEmbModel" placeholder="snunlp/KR-SBERT-V40K-kl" />
+          </div>
+          <div class="form-group">
+            <label>EMBEDDING_DIM</label>
+            <input type="number" id="cfgEmbDim" value="768" />
+          </div>
+          <div class="form-group">
+            <label>TOP_K</label>
+            <input type="number" id="cfgTopK" value="6" />
+          </div>
+          <div class="form-group">
+            <label>BM25_K</label>
+            <input type="number" id="cfgBm25K" value="10" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>DISCLAIMER</label>
+            <input type="text" id="cfgDisclaimer" />
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn-primary" id="btnSaveSettings">저장</button>
+          <button class="btn btn-ghost"   id="btnReloadSettings">초기화</button>
+        </div>
+        <p id="settingsSaved" style="color:#4ade80;margin-top:10px;display:none;">✔ 저장되었습니다.</p>
+      </div>
+    </div>
+
+    <!-- LOGS PAGE -->
+    <div class="page" id="page-logs">
+      <h2>백엔드 로그</h2>
+      <div class="card">
+        <div class="btn-row" style="margin-bottom:12px">
+          <button class="btn btn-ghost" id="btnClearLog">로그 지우기</button>
+        </div>
+        <div id="logConsole"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="statusBar">
+  <span class="dot grey" id="statusDot"></span>
+  <span id="statusText">백엔드 꺼짐</span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
