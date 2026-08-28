@@ -1,4 +1,11 @@
 @echo off
+rem 더블클릭으로 실행해도 창이 즉시 닫히지 않도록, 아직 "재실행 표시(__RUN__)"가
+rem 없으면 새 cmd 창(/k = 끝나도 창 유지)을 열어 이 스크립트를 다시 실행한다.
+if /I not "%~1"=="__RUN__" (
+    start "Public Data AI" cmd /k "%~f0" __RUN__
+    exit /b
+)
+
 chcp 65001 >nul
 setlocal
 
@@ -6,9 +13,7 @@ cd /d "%~dp0"
 
 if not exist "node_modules" (
     echo [오류] node_modules 폴더가 없습니다. 먼저 install.bat 을 실행하세요.
-    echo.
-    pause
-    exit /b 1
+    goto :end
 )
 
 if not exist ".env" (
@@ -23,6 +28,10 @@ if errorlevel 1 (
     echo.
     echo [오류] 실행에 실패했습니다. dist 폴더가 비어있다면 install.bat 을
     echo        다시 실행해 빌드를 완료하세요.
-    pause
-    exit /b 1
+    goto :end
 )
+
+:end
+echo.
+echo 이 창은 아무 키나 누르면 닫힙니다.
+pause >nul
