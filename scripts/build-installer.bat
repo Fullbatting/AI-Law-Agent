@@ -14,7 +14,7 @@ cd /d "%~dp0.."
 
 echo ================================================
 echo  Public Data AI - Windows 배포용 인스톨러 빌드
-echo  ^(electron-builder NSIS 인스톨러를 release\ 폴더에 생성합니다^)
+echo  electron-builder로 NSIS 인스톨러를 release\ 폴더에 생성합니다.
 echo ================================================
 echo.
 
@@ -43,7 +43,7 @@ if errorlevel 1 (
 
 echo.
 echo ================================================
-echo  release\ 폴더에 인스톨러^(.exe^)가 생성되었습니다.
+echo  release\ 폴더에 인스톨러 .exe 파일이 생성되었습니다.
 echo ================================================
 
 :end

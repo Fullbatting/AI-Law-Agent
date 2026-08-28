@@ -24,7 +24,7 @@
     "package:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "better-sqlite3": "^13.0.3",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^4.5.0",
     "react": "^18.3.1",
@@ -32,7 +32,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.11",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.7.4",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
