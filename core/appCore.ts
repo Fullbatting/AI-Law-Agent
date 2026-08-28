@@ -9,6 +9,7 @@ import type { SlmRuntime } from "./llm/inference/types";
 import type { ModelManager } from "./llm/modelManager";
 import type { NormalizedResult } from "./types/domain";
 import type { QueryDSL } from "./query/dsl/types";
+import { buildTemplateSummary } from "./llm/prompt/summarizePrompt";
 
 export interface AskResult {
   ok: boolean;
@@ -32,6 +33,7 @@ export class AppCore {
   readonly cache: CacheManager;
   readonly conversations: ConversationManager;
   readonly modelManager: ModelManager;
+  private readonly slmProvider: () => SlmRuntime;
 
   /**
    * @param fallbackRuntime 사용자가 GGUF 모델을 업로드하지 않았을 때(또는 로드에
@@ -45,10 +47,8 @@ export class AppCore {
     this.modelManager = modelManager;
     // GGUF 모델이 로드되어 있으면 그걸 우선 쓰고, 없으면 폴백으로 넘어간다.
     // 사용자가 대화 도중 모델을 로드/해제해도 다음 질의부터 바로 반영된다.
-    this.planner = new QueryPlanner(
-      () => this.modelManager.getRuntime() ?? fallbackRuntime,
-      this.registry
-    );
+    this.slmProvider = () => this.modelManager.getRuntime() ?? fallbackRuntime;
+    this.planner = new QueryPlanner(this.slmProvider, this.registry);
     this.cache = new CacheManager(db);
     this.conversations = new ConversationManager(db);
   }
@@ -79,9 +79,23 @@ export class AppCore {
       this.conversations.recordApiCall(userMessage.id, dsl, result.result);
     }
 
-    const summary = summarizeResults(results);
+    const summary = await this.summarize(userText, results);
     this.conversations.addMessage(conversationId, "assistant", summary);
     return { ok: true, message: summary, results };
+  }
+
+  /**
+   * 조회된 결과를 자연어로 설명한다. SLM이 있으면 그걸로 매끄럽게 풀어서
+   * 설명하고, 없거나(규칙 기반 폴백) 호출이 실패하면 고정 템플릿으로
+   * 대체한다 — 어느 쪽이든 원본 표(results)는 항상 그대로 함께 반환되므로
+   * 설명 문장이 부정확해도 사용자가 원본과 대조할 수 있다.
+   */
+  private async summarize(userText: string, results: NormalizedResult[]): Promise<string> {
+    try {
+      return await this.slmProvider().summarize({ userQuestion: userText, results });
+    } catch {
+      return buildTemplateSummary(results);
+    }
   }
 
   private async runWithCache(
@@ -97,10 +111,4 @@ export class AppCore {
     this.cache.set(dsl, execution.result);
     return { ok: true, result: execution.result };
   }
-}
-
-function summarizeResults(results: NormalizedResult[]): string {
-  return results
-    .map((r) => `${r.sourceLabel}에서 ${r.rows.length}건을 찾았습니다. (조회시간: ${r.fetchedAt})`)
-    .join("\n");
 }

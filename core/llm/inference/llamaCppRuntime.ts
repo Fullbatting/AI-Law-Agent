@@ -1,4 +1,5 @@
-import type { SlmRuntime, SlmCompletionRequest } from "./types";
+import type { SlmRuntime, SlmCompletionRequest, SlmSummarizeRequest } from "./types";
+import { buildSummarySystemPrompt, buildSummaryUserPrompt } from "../prompt/summarizePrompt";
 
 /**
  * llama.cpp를 `llama-server` 모드(OpenAI 호환 /v1/chat/completions 엔드포인트)로
@@ -19,6 +20,19 @@ export class LlamaCppRuntime implements SlmRuntime {
   ) {}
 
   async complete(request: SlmCompletionRequest): Promise<string> {
+    const userPrompt = request.correctionHint
+      ? `${request.prompt}\n\n[이전 출력이 아래 오류로 거부되었습니다. 다시 올바른 JSON으로만 답하세요]\n${request.correctionHint}`
+      : request.prompt;
+    return this.chatCompletion(request.system, userPrompt, request.maxTokens ?? 512);
+  }
+
+  async summarize(request: SlmSummarizeRequest): Promise<string> {
+    const system = buildSummarySystemPrompt();
+    const userPrompt = buildSummaryUserPrompt(request.userQuestion, request.results);
+    return this.chatCompletion(system, userPrompt, request.maxTokens ?? 300);
+  }
+
+  private async chatCompletion(system: string, userPrompt: string, maxTokens: number): Promise<string> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -28,16 +42,11 @@ export class LlamaCppRuntime implements SlmRuntime {
         signal: controller.signal,
         body: JSON.stringify({
           messages: [
-            { role: "system", content: request.system },
-            {
-              role: "user",
-              content: request.correctionHint
-                ? `${request.prompt}\n\n[이전 출력이 아래 오류로 거부되었습니다. 다시 올바른 JSON으로만 답하세요]\n${request.correctionHint}`
-                : request.prompt,
-            },
+            { role: "system", content: system },
+            { role: "user", content: userPrompt },
           ],
           temperature: 0.1,
-          max_tokens: request.maxTokens ?? 512,
+          max_tokens: maxTokens,
         }),
       });
       if (!res.ok) {

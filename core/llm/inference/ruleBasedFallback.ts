@@ -1,7 +1,8 @@
-import type { SlmRuntime, SlmCompletionRequest } from "./types";
+import type { SlmRuntime, SlmCompletionRequest, SlmSummarizeRequest } from "./types";
 import type { QueryDSL, QueryPlan } from "../../query/dsl/types";
 import { REGION_NAME_TO_SIDO_CODE } from "../../../data/dictionaries/regionCodes";
 import { HOSPITAL_TYPE_NAME_TO_CODE } from "../../../data/dictionaries/hospitalTypeCodes";
+import { buildTemplateSummary } from "../prompt/summarizePrompt";
 
 const FIELD_ALIASES: Record<string, string> = {
   병원명: "name",
@@ -31,6 +32,11 @@ export class RuleBasedFallbackRuntime implements SlmRuntime {
   async complete(request: SlmCompletionRequest): Promise<string> {
     const plan = this.buildPlan(request.userText);
     return JSON.stringify(plan);
+  }
+
+  /** 실제 언어 이해 없이 고정 템플릿으로 결과 건수/출처만 요약한다. */
+  async summarize(request: SlmSummarizeRequest): Promise<string> {
+    return buildTemplateSummary(request.results);
   }
 
   private buildPlan(userText: string): QueryPlan {

@@ -1,4 +1,5 @@
-import type { SlmRuntime, SlmCompletionRequest } from "./types";
+import type { SlmRuntime, SlmCompletionRequest, SlmSummarizeRequest } from "./types";
+import { buildSummarySystemPrompt, buildSummaryUserPrompt } from "../prompt/summarizePrompt";
 
 /**
  * 사용자가 업로드/선택한 GGUF 모델 파일을 node-llama-cpp로 직접 프로세스 내에서
@@ -23,23 +24,29 @@ export class NodeLlamaCppRuntime implements SlmRuntime {
   ) {}
 
   async complete(request: SlmCompletionRequest): Promise<string> {
+    const promptText = request.correctionHint
+      ? `${request.prompt}\n\n[이전 출력이 아래 오류로 거부되었습니다. 다시 올바른 JSON으로만 답하세요]\n${request.correctionHint}`
+      : request.prompt;
+    return this.runSession(request.system, promptText, request.maxTokens ?? 512);
+  }
+
+  async summarize(request: SlmSummarizeRequest): Promise<string> {
+    const system = buildSummarySystemPrompt();
+    const userPrompt = buildSummaryUserPrompt(request.userQuestion, request.results);
+    return this.runSession(system, userPrompt, request.maxTokens ?? 300);
+  }
+
+  private async runSession(system: string, userPrompt: string, maxTokens: number): Promise<string> {
     const { LlamaChatSession } = (await import("node-llama-cpp")) as typeof import("node-llama-cpp");
     const context = this.context as import("node-llama-cpp").LlamaContext;
 
     const session = new LlamaChatSession({
       contextSequence: context.getSequence(),
-      systemPrompt: request.system,
+      systemPrompt: system,
     });
 
     try {
-      const promptText = request.correctionHint
-        ? `${request.prompt}\n\n[이전 출력이 아래 오류로 거부되었습니다. 다시 올바른 JSON으로만 답하세요]\n${request.correctionHint}`
-        : request.prompt;
-
-      return await session.prompt(promptText, {
-        maxTokens: request.maxTokens ?? 512,
-        temperature: 0.1,
-      });
+      return await session.prompt(userPrompt, { maxTokens, temperature: 0.1 });
     } finally {
       await session.dispose({ disposeSequence: true });
     }

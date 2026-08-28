@@ -24,6 +24,17 @@
 세 구현 모두 `SlmRuntime` 인터페이스(`core/llm/inference/types.ts`)를 따르므로
 Query Planner/Tool Router 이하 코드는 어떤 런타임이 실제로 쓰이는지 몰라도 된다.
 
+`SlmRuntime`은 두 메서드로 SLM의 서로 다른 두 역할을 분리한다 (계층 구조
+다이어그램의 앞뒤 두 SLM 지점에 대응):
+
+- `complete()` — 자연어 질문을 Query DSL JSON으로 변환 (`QueryPlanner`가 호출)
+- `summarize()` — Tool Router가 이미 조회해온 결과를 자연어 설명으로 풀어줌
+  (`AppCore.ask()`가 호출). 프롬프트에는 결과 데이터(표본 최대 10행)만
+  넘기고 새로운 사실을 지어내지 말라고 명시한다 (`core/llm/prompt/summarizePrompt.ts`).
+  실패하거나 규칙 기반 폴백일 때는 `buildTemplateSummary()`의 고정 문구로
+  대체되므로 `ask()`가 실패하지 않는다. 어느 경우든 원본 표(`NormalizedResult`)는
+  요약 문장과 별개로 항상 함께 반환되어 UI가 그대로 보여준다.
+
 ## 디렉터리 ↔ 역할 매핑
 
 | 디렉터리 | 역할 | 기술기획서 참고 |

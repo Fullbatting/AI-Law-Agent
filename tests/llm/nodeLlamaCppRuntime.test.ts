@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { NodeLlamaCppRuntime } from "../../core/llm/inference/nodeLlamaCppRuntime";
+import type { NormalizedResult } from "../../core/types/domain";
 
 const promptMock = vi.fn(async (text: string) => `echo: ${text}`);
 const disposeMock = vi.fn(async () => {});
@@ -51,5 +52,24 @@ describe("NodeLlamaCppRuntime", () => {
     const [sentPrompt] = promptMock.mock.calls[0] as [string];
     expect(sentPrompt).toContain("질문");
     expect(sentPrompt).toContain("field 오류");
+  });
+
+  it("summarize()도 세션을 만들어 쓰고 dispose한다", async () => {
+    const runtime = new NodeLlamaCppRuntime(mockContext);
+    const results: NormalizedResult[] = [
+      {
+        entity: "hospital",
+        source: "hira",
+        sourceLabel: "건강보험심사평가원(HIRA)",
+        fetchedAt: "2026-08-28T00:00:00.000Z",
+        rows: [{ name: "가나병원" }],
+        totalCount: 1,
+      },
+    ];
+
+    const result = await runtime.summarize({ userQuestion: "서울 병원 알려줘", results });
+
+    expect(result).toContain("서울 병원 알려줘");
+    expect(disposeMock).toHaveBeenCalledWith({ disposeSequence: true });
   });
 });
