@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "echo \"(lint 설정은 추후 추가 예정)\"",
-    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --outfile=dist/main/index.js",
+    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --external:node-llama-cpp --outfile=dist/main/index.js",
     "build:preload": "esbuild apps/desktop/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js",
     "build:renderer": "esbuild apps/desktop/renderer/main.tsx --bundle --platform=browser --outfile=dist/renderer/renderer.js",
     "build:assets": "mkdir -p dist/renderer && cp apps/desktop/renderer/index.html apps/desktop/renderer/styles.css dist/renderer/",
@@ -28,7 +28,8 @@
   },
   "dependencies": {
     "exceljs": "^4.4.0",
-    "fast-xml-parser": "^4.5.0",
+    "fast-xml-parser": "^5.11.1",
+    "node-llama-cpp": "^3.20.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^3.23.8"
@@ -49,17 +50,34 @@
     "directories": {
       "output": "release"
     },
-    "files": ["dist/**/*", "package.json"],
+    "files": [
+      "dist/**/*",
+      "package.json",
+      "node_modules/node-llama-cpp/**/*",
+      "node_modules/@node-llama-cpp/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/node-llama-cpp/**/*",
+      "node_modules/@node-llama-cpp/**/*"
+    ],
     "extraResources": [
       {
         "from": "data",
         "to": "data",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
-    "win": { "target": "nsis" },
-    "mac": { "target": "dmg" },
-    "linux": { "target": "AppImage" },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

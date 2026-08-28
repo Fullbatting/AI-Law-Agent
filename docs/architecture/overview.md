@@ -10,6 +10,20 @@
    → 원본 데이터 → Data Processor → 결과 → SLM → 사용자
 ```
 
+## SLM 런타임 우선순위
+
+`AppCore`가 `QueryPlanner`에 넘기는 `SlmRuntime`은 매 질의마다 다음 순서로
+결정된다 (`core/appCore.ts`의 `slmProvider`):
+
+1. 사용자가 사이드바에서 업로드해 로드된 GGUF 모델(`ModelManager.getRuntime()`,
+   node-llama-cpp로 프로세스 내 추론)
+2. 없으면 `LLAMA_SERVER_URL`에 떠 있는 외부 llama.cpp 서버
+   (`core/llm/inference/llamaCppRuntime.ts`)
+3. 그마저 없으면 규칙 기반 폴백(`ruleBasedFallback.ts`)
+
+세 구현 모두 `SlmRuntime` 인터페이스(`core/llm/inference/types.ts`)를 따르므로
+Query Planner/Tool Router 이하 코드는 어떤 런타임이 실제로 쓰이는지 몰라도 된다.
+
 ## 디렉터리 ↔ 역할 매핑
 
 | 디렉터리 | 역할 | 기술기획서 참고 |
@@ -17,7 +31,8 @@
 | `apps/desktop/main` | Electron 메인 프로세스, IPC 핸들러, AppCore 소유 | 3장, 15장 |
 | `apps/desktop/preload` | contextBridge로 Renderer에 최소 API만 노출 | 15장 |
 | `apps/desktop/renderer` | React 기반 채팅/결과 UI | 13장 |
-| `core/llm` | 시스템 프롬프트, few-shot, Query DSL Zod 스키마, SLM 런타임(llama.cpp/규칙 기반 폴백) | 5장, 17장 |
+| `core/llm` | 시스템 프롬프트, few-shot, Query DSL Zod 스키마, SLM 런타임(GGUF/llama.cpp 서버/규칙 기반 폴백) | 5장, 17장 |
+| `core/llm/modelManager.ts` | 사용자가 업로드한 GGUF 모델의 로드/해제/상태 관리, node-llama-cpp로 프로세스 내 추론 | 17장 |
 | `core/planner` | 자연어 → QueryPlan 변환 + 검증 실패 시 재생성 요청 | 5장, 25장 |
 | `core/tools` | Tool Registry(허용된 Connector 목록), Tool Router(실행) | 6장 |
 | `core/permission` | 등록되지 않은 source/entity, 과도한 limit 차단 | 25장 |

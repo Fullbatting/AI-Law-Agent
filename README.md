@@ -37,10 +37,34 @@ public-data-ai/
 
 - Node.js 22.5 이상 (Node 내장 `node:sqlite` 모듈 사용) — [nodejs.org](https://nodejs.org)에서 설치.
   네이티브 애드온 컴파일이 필요 없어 별도의 빌드 도구 설치 없이 `npm install`만으로 동작한다.
-- (선택) [llama.cpp](https://github.com/ggerganov/llama.cpp)의 `llama-server`로
-  구동한 3~5B급 GGUF 모델 — 없으면 자동으로 규칙 기반 폴백 SLM을 사용해
-  파이프라인 전체를 그대로 개발/테스트할 수 있다.
+- (선택) 3~5B급 **GGUF 모델 파일** — 앱을 실행한 뒤 사이드바에서 파일을
+  선택하기만 하면 된다 (아래 "로컬 SLM(GGUF) 사용하기" 참고). 모델을
+  올리지 않아도 규칙 기반 폴백 SLM으로 파이프라인 전체를 그대로 개발/테스트할 수 있다.
 - 공공데이터포털에서 발급받은 HIRA 서비스키, 법제처 오픈API 이용자 ID(OC)
+
+## 로컬 SLM(GGUF) 사용하기
+
+이 앱은 [node-llama-cpp](https://github.com/withcatai/node-llama-cpp)를 통해
+GGUF 모델을 **Electron 프로세스 안에서 직접** 구동한다. 별도의 llama.cpp
+서버를 띄우거나 포트를 설정할 필요가 없다.
+
+1. 앱을 실행하면 사이드바 아래쪽에 **"로컬 SLM (GGUF)"** 패널이 보인다.
+2. **GGUF 모델 업로드** 버튼을 눌러 `.gguf` 파일을 선택한다.
+   - [Hugging Face](https://huggingface.co/models?library=gguf)에서
+     3~5B급 한국어 지원 모델(GGUF 포맷)을 미리 받아두면 된다
+     (기술기획서 17~18장의 모델 선정 기준 참고).
+3. 로딩 진행률이 진행바로 표시되고, 완료되면 초록색 체크와 함께 모델 이름이
+   표시된다. 이후 질문부터 바로 이 모델이 자연어 → Query DSL 변환에 쓰인다.
+4. 마지막으로 로드한 모델 경로는 자동 저장되어, 다음에 앱을 실행하면
+   다시 자동으로 불러온다. **모델 해제** 버튼으로 언제든 내릴 수 있다.
+
+모델을 올리지 않았거나 로드에 실패하면 자동으로 규칙 기반 폴백(또는
+`LLAMA_SERVER_URL`에 별도 llama.cpp 서버를 띄워둔 경우 그 서버)으로
+전환되므로 앱 자체가 멈추지는 않는다.
+
+> **참고**: GGUF 모델 파일과 node-llama-cpp의 플랫폼별 바이너리는 용량이
+> 크다(수백 MB~수 GB). 첫 `npm install`/`install.bat` 실행 시 인터넷
+> 상황에 따라 시간이 걸릴 수 있다.
 
 ## Windows에서 압축파일로 다운받아 설치하기 (Git/CLI 지식 불필요)
 
@@ -88,8 +112,9 @@ cp .env.example .env   # HIRA_SERVICE_KEY, LAW_API_OC 등을 채워 넣는다
 npm start          # build 후 Electron 창을 띄운다
 ```
 
-llama.cpp 서버(`LLAMA_SERVER_URL`, 기본 `http://127.0.0.1:8080`)가 떠 있지
-않으면 `core/llm/inference/ruleBasedFallback.ts`의 규칙 기반 폴백이 자동으로
+사이드바에서 GGUF 모델을 업로드하지 않았고, `LLAMA_SERVER_URL`(기본
+`http://127.0.0.1:8080`)에 별도 llama.cpp 서버도 떠 있지 않으면
+`core/llm/inference/ruleBasedFallback.ts`의 규칙 기반 폴백이 자동으로
 대신 동작한다 (개발/데모용).
 
 ### 타입 체크 / 테스트

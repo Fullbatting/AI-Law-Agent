@@ -4,7 +4,8 @@ import { RuleBasedFallbackRuntime } from "../../core/llm/inference/ruleBasedFall
 import { ToolRegistry } from "../../core/tools/registry";
 
 describe("QueryPlanner (규칙 기반 폴백 SLM 사용)", () => {
-  const planner = new QueryPlanner(new RuleBasedFallbackRuntime(), new ToolRegistry());
+  const fallback = new RuleBasedFallbackRuntime();
+  const planner = new QueryPlanner(() => fallback, new ToolRegistry());
 
   it("병원 검색 질문을 QueryDSL로 변환한다", async () => {
     const result = await planner.plan("서울에 있는 종합병원 20개를 병원명과 주소만 보여줘.");

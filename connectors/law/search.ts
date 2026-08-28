@@ -3,6 +3,8 @@ import type { NormalizedResult, ConnectorRequestParams } from "../../core/types/
 import type { QueryDSL } from "../../core/query/dsl/types";
 import { ApiClient } from "../common/apiClient";
 import { parseApiResponse } from "../common/parser";
+import { validateWithSchema } from "../common/validator";
+import { lawSearchItemSchema, type LawSearchItem } from "../../data/schemas/law.schema";
 
 /**
  * 법제처 국가법령정보 공동활용 OpenAPI - 법령 검색 Connector.
@@ -61,12 +63,7 @@ export class LawSearchConnector implements ApiConnector {
   normalize(rawResponse: unknown): NormalizedResult {
     const obj = rawResponse as Record<string, unknown>;
     const container = (obj?.["LawSearch"] as Record<string, unknown>) ?? {};
-    const lawField = container["law"];
-    const items = Array.isArray(lawField)
-      ? (lawField as Record<string, unknown>[])
-      : lawField
-        ? [lawField as Record<string, unknown>]
-        : [];
+    const items = extractItems(container["law"]);
 
     const rows = items.map((item) => ({
       law_id: str(item["법령일련번호"]),
@@ -87,6 +84,26 @@ export class LawSearchConnector implements ApiConnector {
       totalCount: num(container["totalCnt"]) ?? rows.length,
     };
   }
+}
+
+/**
+ * 원본 law 배열을 꺼낸 뒤 각 항목을 lawSearchItemSchema로 검증한다.
+ * 예상과 다른 형식의 항목은 건너뛰고 경고만 남긴다 (기술기획서 25장 참고).
+ */
+function extractItems(lawField: unknown): LawSearchItem[] {
+  if (!lawField) return [];
+  const rawItems = Array.isArray(lawField) ? lawField : [lawField];
+
+  const items: LawSearchItem[] = [];
+  for (const rawItem of rawItems) {
+    const result = validateWithSchema(lawSearchItemSchema, rawItem);
+    if (result.ok && result.data) {
+      items.push(result.data);
+    } else {
+      console.warn(`[law_search] 예상과 다른 형식의 항목을 건너뜁니다: ${result.error}`);
+    }
+  }
+  return items;
 }
 
 function str(v: unknown): string | null {

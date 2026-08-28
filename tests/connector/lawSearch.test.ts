@@ -57,4 +57,25 @@ describe("LawSearchConnector", () => {
     });
     expect(normalized.sourceLabel).toBe("법제처 국가법령정보센터");
   });
+
+  it("형식이 맞지 않는 항목은 건너뛰고 나머지는 정상 정규화한다", () => {
+    const connector = new LawSearchConnector();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const raw = {
+      LawSearch: {
+        totalCnt: "2",
+        law: [
+          { 법령명한글: "개인정보 보호법" },
+          { 법령명한글: 12345 }, // 문자열이어야 하므로 검증 실패
+        ],
+      },
+    };
+
+    const normalized = connector.normalize(raw);
+    expect(normalized.rows).toHaveLength(1);
+    expect(normalized.rows[0].name).toBe("개인정보 보호법");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+  });
 });

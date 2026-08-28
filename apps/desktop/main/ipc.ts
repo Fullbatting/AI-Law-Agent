@@ -10,4 +10,10 @@ export const IPC = {
   cacheClearAll: "cache:clearAll",
   exportExcel: "export:excel",
   exportCsv: "export:csv",
+  modelSelectFile: "model:selectFile",
+  modelLoad: "model:load",
+  modelUnload: "model:unload",
+  modelStatus: "model:status",
+  /** main → renderer 전용 이벤트 (모델 로딩 진행률 등 상태 변화 push) */
+  modelStatusChanged: "model:statusChanged",
 } as const;

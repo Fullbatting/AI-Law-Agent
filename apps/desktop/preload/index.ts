@@ -18,6 +18,17 @@ const api = {
   ask: (conversationId: number, text: string) => ipcRenderer.invoke(IPC.chatAsk, conversationId, text),
   exportExcel: (result: unknown) => ipcRenderer.invoke(IPC.exportExcel, result),
   exportCsv: (result: unknown) => ipcRenderer.invoke(IPC.exportCsv, result),
+
+  // GGUF 모델 관리
+  getModelStatus: () => ipcRenderer.invoke(IPC.modelStatus),
+  selectAndLoadModelFile: () => ipcRenderer.invoke(IPC.modelSelectFile),
+  loadModelFile: (filePath: string) => ipcRenderer.invoke(IPC.modelLoad, filePath),
+  unloadModel: () => ipcRenderer.invoke(IPC.modelUnload),
+  onModelStatusChanged: (callback: (status: unknown) => void) => {
+    const handler = (_event: unknown, status: unknown) => callback(status);
+    ipcRenderer.on(IPC.modelStatusChanged, handler);
+    return () => ipcRenderer.removeListener(IPC.modelStatusChanged, handler);
+  },
 };
 
 contextBridge.exposeInMainWorld("publicDataAI", api);

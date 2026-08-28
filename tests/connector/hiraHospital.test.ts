@@ -80,6 +80,31 @@ describe("HiraHospitalConnector", () => {
     expect(normalized.sourceLabel).toBe("건강보험심사평가원(HIRA)");
   });
 
+  it("형식이 맞지 않는 항목은 건너뛰고 나머지는 정상 정규화한다", () => {
+    const connector = new HiraHospitalConnector();
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const raw = {
+      response: {
+        body: {
+          items: {
+            item: [
+              { yadmNm: "가나병원" },
+              { yadmNm: 12345 }, // yadmNm은 문자열이어야 하므로 검증 실패
+            ],
+          },
+          totalCount: 2,
+        },
+      },
+    };
+
+    const normalized = connector.normalize(raw);
+    expect(normalized.rows).toHaveLength(1);
+    expect(normalized.rows[0].name).toBe("가나병원");
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
+  });
+
   it("응답이 오류 코드를 포함하면 예외를 던진다", async () => {
     vi.stubGlobal(
       "fetch",

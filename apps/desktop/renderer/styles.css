@@ -105,6 +105,82 @@ body {
   background: var(--bg);
 }
 
+.model-panel {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.model-panel-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.model-status {
+  font-size: 12px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-status-loaded {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.model-status-error {
+  color: #dc2626;
+}
+
+.model-status-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.model-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.model-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.model-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.model-panel-actions button {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.model-panel-actions button:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.model-panel-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .chat-panel {
   flex: 1;
   display: flex;

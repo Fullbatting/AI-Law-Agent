@@ -19,19 +19,3 @@ export const hiraHospitalItemSchema = z.object({
 });
 
 export type HiraHospitalItem = z.infer<typeof hiraHospitalItemSchema>;
-
-/** 내부 표준 병원 레코드 (Data Processor / UI가 다루는 최종 컬럼 형태) */
-export const normalizedHospitalSchema = z.object({
-  name: z.string(),
-  hospital_type: z.string().nullable(),
-  region: z.string().nullable(),
-  district: z.string().nullable(),
-  address: z.string().nullable(),
-  phone: z.string().nullable(),
-  doctor_count: z.number().nullable(),
-  established_at: z.string().nullable(),
-  emergency_room: z.boolean().nullable(),
-  ykiho: z.string().nullable(),
-});
-
-export type NormalizedHospital = z.infer<typeof normalizedHospitalSchema>;

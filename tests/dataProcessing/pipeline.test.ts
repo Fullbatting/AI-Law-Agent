@@ -56,6 +56,18 @@ describe("runPipeline", () => {
     const result = runPipeline(hospitals, dsl);
     expect(result).toHaveLength(1);
   });
+
+  it("여러 필드로 group_by 해도 각 필드 값을 정확히 복원한다", () => {
+    const dsl = baseDsl({
+      group_by: ["region", "hospital_type"],
+      aggregate: [{ fn: "count", as: "count" }],
+    });
+    const result = runPipeline(hospitals, dsl);
+
+    expect(result).toHaveLength(3);
+    const seoulGeneral = result.find((r) => r.region === "서울" && r.hospital_type === "종합병원");
+    expect(seoulGeneral?.count).toBe(1);
+  });
 });
 
 describe("applyJoin", () => {

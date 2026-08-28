@@ -13,16 +13,3 @@ export const lawSearchItemSchema = z.object({
 });
 
 export type LawSearchItem = z.infer<typeof lawSearchItemSchema>;
-
-/** 내부 표준 법령 레코드 */
-export const normalizedLawSchema = z.object({
-  law_id: z.string().nullable(),
-  name: z.string(),
-  law_type: z.string().nullable(),
-  ministry: z.string().nullable(),
-  promulgation_date: z.string().nullable(),
-  effective_date: z.string().nullable(),
-  detail_url: z.string().nullable(),
-});
-
-export type NormalizedLaw = z.infer<typeof normalizedLawSchema>;

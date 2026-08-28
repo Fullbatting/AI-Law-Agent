@@ -9,6 +9,7 @@ import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import path from "node:path";
 import { openDatabase } from "../../../core/db/schema";
 import { createSlmRuntime } from "../../../core/llm/inference";
+import { ModelManager } from "../../../core/llm/modelManager";
 import { AppCore } from "../../../core/appCore";
 import { writeExcelFile } from "../../../core/export/excelExporter";
 import { writeCsvFile } from "../../../core/export/csvExporter";
@@ -22,10 +23,26 @@ function getDbPath(): string {
   return process.env.APP_DB_PATH ?? path.join(app.getPath("userData"), "app.sqlite3");
 }
 
+function getModelSettingsPath(): string {
+  return path.join(app.getPath("userData"), "model-settings.json");
+}
+
 async function initAppCore(): Promise<AppCore> {
   const db = openDatabase(getDbPath());
-  const slm = await createSlmRuntime();
-  return new AppCore(db, slm);
+  // 사용자가 GGUF 모델을 업로드하지 않았거나 로드에 실패했을 때 쓸 폴백
+  // (llama.cpp 서버가 떠 있으면 그것을, 아니면 규칙 기반 폴백을 자동 선택한다).
+  const fallbackRuntime = await createSlmRuntime();
+  const modelManager = new ModelManager(getModelSettingsPath());
+  const core = new AppCore(db, modelManager, fallbackRuntime);
+
+  modelManager.onStatusChange((status) => {
+    mainWindow?.webContents.send(IPC.modelStatusChanged, status);
+  });
+  // 이전에 사용하던 모델이 있으면 백그라운드에서 자동으로 다시 불러온다.
+  // 창을 띄우는 걸 막지 않도록 await하지 않는다 — 진행 상황은 위 이벤트로 전달된다.
+  void modelManager.restoreLastModel();
+
+  return core;
 }
 
 function createWindow(): void {
@@ -105,6 +122,33 @@ function registerIpcHandlers(core: AppCore): void {
 
   ipcMain.handle(IPC.exportCsv, async (_event, result: NormalizedResult) => {
     return exportResult(result, "csv", async (filePath) => writeCsvFile(result.rows, filePath));
+  });
+
+  ipcMain.handle(IPC.modelStatus, () => {
+    return core.modelManager.getStatus();
+  });
+
+  // 파일 선택 대화상자를 띄우고, 고른 즉시 그 GGUF 파일을 로드한다.
+  // 로딩은 시간이 걸릴 수 있어(대용량 모델) modelStatusChanged 이벤트로
+  // 진행률을 별도로 밀어주고, 이 호출은 최종 결과가 나오면 resolve된다.
+  ipcMain.handle(IPC.modelSelectFile, async () => {
+    if (!mainWindow) return { canceled: true as const };
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      title: "GGUF 모델 파일 선택",
+      filters: [{ name: "GGUF 모델", extensions: ["gguf"] }],
+      properties: ["openFile"],
+    });
+    if (canceled || filePaths.length === 0) return { canceled: true as const };
+    const status = await core.modelManager.loadModel(filePaths[0]);
+    return { canceled: false as const, status };
+  });
+
+  ipcMain.handle(IPC.modelLoad, async (_event, filePath: string) => {
+    return core.modelManager.loadModel(filePath);
+  });
+
+  ipcMain.handle(IPC.modelUnload, async () => {
+    return core.modelManager.unloadModel();
   });
 }
 

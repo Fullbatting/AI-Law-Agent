@@ -13,11 +13,12 @@ release/
 *.deb
 *.rpm
 
-# Local runtime data (SQLite DBs, downloaded models)
+# Local runtime data (SQLite DBs, downloaded/업로드된 GGUF 모델)
 *.sqlite
 *.sqlite3
 /data/runtime/
-/models/*.gguf
+*.gguf
+model-settings.json
 
 # Environment / secrets
 .env

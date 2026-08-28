@@ -6,7 +6,8 @@
 | 대상 | 라이선스/이용조건 |
 |---|---|
 | 이 저장소의 프로그램 소스 | `LICENSE` 파일 (Apache License 2.0) |
-| Local SLM (llama.cpp로 구동하는 GGUF 모델) | 사용하는 모델 배포처가 정한 라이선스를 준수 (예: Llama, Qwen, EXAONE 등 각 모델 라이선스 확인 필요) |
+| 추론 엔진 (node-llama-cpp, llama.cpp 바인딩) | MIT — npm 의존성으로 포함되는 프로그램 코드이며 GGUF 모델 파일 자체와는 별개다 |
+| Local SLM (사용자가 업로드하는 GGUF 모델 파일) | 사용하는 모델 배포처가 정한 라이선스를 준수 (예: Llama, Qwen, EXAONE 등 각 모델 라이선스 확인 필요) |
 | HIRA(건강보험심사평가원) 병원정보서비스 데이터 | 공공데이터포털 이용약관 및 해당 오픈API 활용 신청 시 안내된 조건 준수 |
 | 법제처 국가법령정보 데이터 | 국가법령정보 공동활용 오픈API 이용약관 준수 |
 
@@ -20,5 +21,6 @@
 - UI는 모든 결과에 "데이터 출처"와 "조회시간"을 표시해 원 데이터 제공기관을
   명확히 밝힌다 (`apps/desktop/renderer/components/ResultTable.tsx`).
 - SLM 모델 파일(`*.gguf`)은 이 저장소에 포함하지 않는다 (`.gitignore` 참고).
-  사용자가 별도로 다운로드해 `LLAMA_SERVER_URL`이 가리키는 llama.cpp 서버에
-  올려야 한다.
+  사용자가 별도로 다운로드해 앱 사이드바의 "GGUF 모델 업로드"로 직접
+  선택하거나(권장), 직접 운영하는 llama.cpp 서버의 `LLAMA_SERVER_URL`을
+  지정해 사용해야 한다.

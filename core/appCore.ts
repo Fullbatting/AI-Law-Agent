@@ -6,6 +6,7 @@ import { QueryPlanner } from "./planner/queryPlanner";
 import { CacheManager } from "./cache/cacheManager";
 import { ConversationManager } from "./conversation/conversationManager";
 import type { SlmRuntime } from "./llm/inference/types";
+import type { ModelManager } from "./llm/modelManager";
 import type { NormalizedResult } from "./types/domain";
 import type { QueryDSL } from "./query/dsl/types";
 
@@ -30,12 +31,24 @@ export class AppCore {
   readonly planner: QueryPlanner;
   readonly cache: CacheManager;
   readonly conversations: ConversationManager;
+  readonly modelManager: ModelManager;
 
-  constructor(db: AppDatabase, slm: SlmRuntime) {
+  /**
+   * @param fallbackRuntime 사용자가 GGUF 모델을 업로드하지 않았을 때(또는 로드에
+   * 실패했을 때) 사용할 런타임. llama.cpp 서버가 떠 있으면 그것을, 아니면
+   * 규칙 기반 폴백을 넘긴다 (core/llm/inference/index.ts의 createSlmRuntime 참고).
+   */
+  constructor(db: AppDatabase, modelManager: ModelManager, fallbackRuntime: SlmRuntime) {
     this.registry = new ToolRegistry();
     const permissions = new PermissionManager(this.registry);
     this.router = new ToolRouter(this.registry, permissions);
-    this.planner = new QueryPlanner(slm, this.registry);
+    this.modelManager = modelManager;
+    // GGUF 모델이 로드되어 있으면 그걸 우선 쓰고, 없으면 폴백으로 넘어간다.
+    // 사용자가 대화 도중 모델을 로드/해제해도 다음 질의부터 바로 반영된다.
+    this.planner = new QueryPlanner(
+      () => this.modelManager.getRuntime() ?? fallbackRuntime,
+      this.registry
+    );
     this.cache = new CacheManager(db);
     this.conversations = new ConversationManager(db);
   }

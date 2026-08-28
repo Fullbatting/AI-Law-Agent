@@ -20,7 +20,12 @@ export interface PlanningResult {
  */
 export class QueryPlanner {
   constructor(
-    private readonly slm: SlmRuntime,
+    /**
+     * 고정된 인스턴스 대신 조회 함수로 받는다 — 사용자가 앱을 쓰는 도중
+     * GGUF 모델을 로드/해제하면 다음 질의부터 바로 그 런타임을 쓰도록
+     * ModelManager가 매 호출 시점의 최신 런타임을 돌려준다.
+     */
+    private readonly slmProvider: () => SlmRuntime,
     private readonly registry: ToolRegistry,
     private readonly maxRetries: number = 1
   ) {}
@@ -28,12 +33,13 @@ export class QueryPlanner {
   async plan(userText: string): Promise<PlanningResult> {
     const system = buildSystemPrompt(this.registry);
     const prompt = buildUserPrompt(userText);
+    const slm = this.slmProvider();
 
     let lastRawOutput = "";
     let correctionHint: string | undefined;
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
-      const rawOutput = await this.slm.complete({ system, prompt, userText, correctionHint });
+      const rawOutput = await slm.complete({ system, prompt, userText, correctionHint });
       lastRawOutput = rawOutput;
 
       const validation = parseAndValidateQueryPlan(rawOutput);

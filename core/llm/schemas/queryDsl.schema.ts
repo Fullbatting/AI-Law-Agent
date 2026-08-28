@@ -80,6 +80,3 @@ export const queryPlanSchema = z.object({
   intent: z.string(),
   queries: z.array(queryDslSchema).min(1),
 });
-
-export type QueryDslParsed = z.infer<typeof queryDslSchema>;
-export type QueryPlanParsed = z.infer<typeof queryPlanSchema>;

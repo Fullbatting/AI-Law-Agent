@@ -26,8 +26,3 @@ export function regionNameToSidoCode(name: string): string | undefined {
   const normalized = name.trim().replace(/(특별시|광역시|특별자치시|특별자치도|도)$/u, "");
   return REGION_NAME_TO_SIDO_CODE[normalized];
 }
-
-export function sidoCodeToRegionName(code: string): string | undefined {
-  const entry = Object.entries(REGION_NAME_TO_SIDO_CODE).find(([, v]) => v === code);
-  return entry?.[0];
-}

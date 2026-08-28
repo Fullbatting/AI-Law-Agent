@@ -19,8 +19,3 @@ export const HOSPITAL_TYPE_NAME_TO_CODE: Record<string, string> = {
 export function hospitalTypeNameToCode(name: string): string | undefined {
   return HOSPITAL_TYPE_NAME_TO_CODE[name.trim()];
 }
-
-export function hospitalTypeCodeToName(code: string): string | undefined {
-  const entry = Object.entries(HOSPITAL_TYPE_NAME_TO_CODE).find(([, v]) => v === code);
-  return entry?.[0];
-}

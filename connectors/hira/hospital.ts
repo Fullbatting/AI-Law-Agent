@@ -3,6 +3,8 @@ import type { NormalizedResult, ConnectorRequestParams } from "../../core/types/
 import type { QueryDSL } from "../../core/query/dsl/types";
 import { ApiClient } from "../common/apiClient";
 import { parseApiResponse, isPublicDataApiError } from "../common/parser";
+import { validateWithSchema } from "../common/validator";
+import { hiraHospitalItemSchema, type HiraHospitalItem } from "../../data/schemas/hospital.schema";
 import { regionNameToSidoCode } from "../../data/dictionaries/regionCodes";
 import { hospitalTypeNameToCode } from "../../data/dictionaries/hospitalTypeCodes";
 
@@ -103,7 +105,6 @@ export class HiraHospitalConnector implements ApiConnector {
 }
 
 // ── 응답 파싱 헬퍼 ────────────────────────────────────────────────────────
-type ApiItem = Record<string, unknown>;
 
 function extractBody(raw: unknown): Record<string, unknown> | undefined {
   const obj = raw as Record<string, unknown>;
@@ -111,12 +112,29 @@ function extractBody(raw: unknown): Record<string, unknown> | undefined {
   return response?.["body"] as Record<string, unknown> | undefined;
 }
 
-function extractItems(body: Record<string, unknown> | undefined): ApiItem[] {
+/**
+ * 원본 item 배열을 꺼낸 뒤 각 항목을 hiraHospitalItemSchema로 검증한다.
+ * HIRA가 응답 필드를 바꾸는 등 예상과 다른 항목은 건너뛰고 경고만 남긴다
+ * (기술기획서 25장 "API 응답 형식 변경" 리스크 대응 — 한 항목이 깨졌다고
+ * 전체 조회가 실패하지 않도록 한다).
+ */
+function extractItems(body: Record<string, unknown> | undefined): HiraHospitalItem[] {
   const itemsWrapper = body?.["items"];
   if (!itemsWrapper) return [];
-  const item = (itemsWrapper as Record<string, unknown>)["item"];
-  if (!item) return [];
-  return Array.isArray(item) ? (item as ApiItem[]) : [item as ApiItem];
+  const raw = (itemsWrapper as Record<string, unknown>)["item"];
+  if (!raw) return [];
+  const rawItems = Array.isArray(raw) ? raw : [raw];
+
+  const items: HiraHospitalItem[] = [];
+  for (const rawItem of rawItems) {
+    const result = validateWithSchema(hiraHospitalItemSchema, rawItem);
+    if (result.ok && result.data) {
+      items.push(result.data);
+    } else {
+      console.warn(`[hira_hospital_search] 예상과 다른 형식의 항목을 건너뜁니다: ${result.error}`);
+    }
+  }
+  return items;
 }
 
 function str(v: unknown): string | null {

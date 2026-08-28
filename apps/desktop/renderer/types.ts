@@ -1,6 +1,7 @@
 import type { ConversationSummary, MessageRecord } from "../../../core/conversation/conversationManager";
 import type { AskResult } from "../../../core/appCore";
 import type { NormalizedResult } from "../../../core/types/domain";
+import type { ModelStatus } from "../../../core/llm/modelManager";
 
 export interface PublicDataAIBridge {
   createConversation(title?: string): Promise<ConversationSummary>;
@@ -13,6 +14,13 @@ export interface PublicDataAIBridge {
   ask(conversationId: number, text: string): Promise<AskResult>;
   exportExcel(result: NormalizedResult): Promise<{ ok: boolean; filePath?: string; error?: string }>;
   exportCsv(result: NormalizedResult): Promise<{ ok: boolean; filePath?: string; error?: string }>;
+
+  // GGUF 모델 관리
+  getModelStatus(): Promise<ModelStatus>;
+  selectAndLoadModelFile(): Promise<{ canceled: true } | { canceled: false; status: ModelStatus }>;
+  loadModelFile(filePath: string): Promise<ModelStatus>;
+  unloadModel(): Promise<ModelStatus>;
+  onModelStatusChanged(callback: (status: ModelStatus) => void): () => void;
 }
 
 declare global {
