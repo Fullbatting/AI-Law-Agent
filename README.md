@@ -22,23 +22,45 @@ LLM은 데이터를 직접 판단하거나 임의로 API를 호출하지 않는�
 
 ```text
 public-data-ai/
+├─ install.bat         # Windows: 처음 설치할 때 한 번 실행 (npm install + 빌드)
+├─ run.bat             # Windows: 설치 후 프로그램 실행
 ├─ apps/desktop/       # Electron 앱 (main / preload / renderer)
 ├─ core/               # LLM 연동, Query Planner, Tool Router, 캐시, 대화 저장, 데이터 가공
 ├─ connectors/         # HIRA, 법제처 등 실제 API Connector
 ├─ data/               # 코드 매핑 사전, 정규화 스키마
+├─ scripts/            # build-installer.bat 등 배포용 보조 스크립트
 ├─ tests/              # Vitest 단위 테스트
 └─ docs/               # 아키텍처/API/라이선스 문서, 기술기획서
 ```
 
 ## 사전 요구 사항
 
-- Node.js 20+ (권장 22)
+- Node.js 20+ (권장 22) — [nodejs.org](https://nodejs.org)에서 LTS 버전 설치
 - (선택) [llama.cpp](https://github.com/ggerganov/llama.cpp)의 `llama-server`로
   구동한 3~5B급 GGUF 모델 — 없으면 자동으로 규칙 기반 폴백 SLM을 사용해
   파이프라인 전체를 그대로 개발/테스트할 수 있다.
 - 공공데이터포털에서 발급받은 HIRA 서비스키, 법제처 오픈API 이용자 ID(OC)
 
-## 시작하기
+## Windows에서 압축파일로 다운받아 설치하기 (Git/CLI 지식 불필요)
+
+1. GitHub 저장소 페이지 → **Code → Download ZIP**으로 소스를 내려받는다.
+2. 원하는 폴더에 압축을 푼다.
+3. **`install.bat`을 더블클릭**한다.
+   - Node.js 설치 여부를 확인하고, 없으면 설치 안내 후 종료한다.
+   - `npm install`로 의존성을 설치한다.
+   - `.env.example`을 복사해 `.env`를 만든다.
+   - 앱을 빌드한다 (`dist/` 생성).
+4. 폴더에 생성된 **`.env` 파일을 메모장으로 열어** `HIRA_SERVICE_KEY`,
+   `LAW_API_OC` 값을 채워 넣는다 (공공데이터포털/법제처에서 미리 발급받아야 함).
+5. **`run.bat`을 더블클릭**하면 Electron 창이 뜨며 프로그램이 시작된다.
+   이후에는 `install.bat`을 다시 실행할 필요 없이 `run.bat`만 실행하면 된다.
+
+> 배포용 단일 설치 프로그램(.exe 인스톨러)이 필요하다면
+> `scripts\build-installer.bat`을 실행한다. `electron-builder`로 NSIS
+> 인스톨러를 만들어 `release\` 폴더에 생성한다 (배포 대상 PC에는 Node.js가
+> 필요 없다).
+
+## 소스에서 직접 개발하기 (git 사용)
 
 ```bash
 git clone https://github.com/Fullbatting/AI-Law-Agent.git
@@ -72,7 +94,8 @@ npm run package:mac     # macOS DMG
 npm run package:linux   # Linux AppImage
 ```
 
-결과물은 `release/` 폴더에 생성된다.
+결과물은 `release/` 폴더에 생성된다. Windows에서는 `scripts\build-installer.bat`
+더블클릭으로 동일한 작업(`npm run package:win`)을 수행할 수 있다.
 
 ## 환경 변수 (`.env`)
 
