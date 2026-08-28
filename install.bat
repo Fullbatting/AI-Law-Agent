@@ -1,8 +1,9 @@
 @echo off
 rem 더블클릭으로 실행해도 창이 즉시 닫히지 않도록, 아직 재실행 표시(__RUN__)가
-rem 없으면 새 cmd 창(/k = 끝나도 창 유지)을 열어 이 스크립트를 다시 실행한다.
+rem 없으면 새 cmd 창에서 이 스크립트를 다시 실행한다. 아래의 pause가 모든
+rem 종료 경로에서 키를 기다리므로 cmd /c로도 자동 종료 전에 로그를 확인할 수 있다.
 if /I not "%~1"=="__RUN__" (
-    start "Public Data AI 설치" cmd /k "%~f0" __RUN__
+    start "Public Data AI 설치" cmd /c "%~f0" __RUN__
     exit /b
 )
 
