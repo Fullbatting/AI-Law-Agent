@@ -1,169 +1,107 @@
-# AI-Law-Agent
+# Public Data AI
 
-한국 법률 문서를 RAG 방식으로 응답하는 에이전트의 reference implementation입니다.  
-**Electron 데스크톱 앱**으로 설치·실행할 수 있으며, Python FastAPI 백엔드를 함께 관리합니다.
+건강보험심사평가원(HIRA)·법제처 등 공공 API를 자연어로 검색·가공하는
+**로컬 SLM 기반 Electron 데스크톱 에이전트**.
 
----
+> 전체 설계 배경과 근거는 [`docs/technical_plan.md`](docs/technical_plan.md)
+> (기술기획서)를 참고한다. 이 README는 실제 저장소를 실행/개발하는 방법을 다룬다.
 
-## 프로젝트 구조
+## 핵심 아이디어
 
-```
-AI-Law-Agent/
-├─ backend/          # Python FastAPI 백엔드 (RAG 엔진)
-│  ├─ api.py         # POST /query SSE 엔드포인트
-│  ├─ server.py      # 데스크톱 런처용 진입점 (/health, /index 포함)
-│  ├─ indexer.py
-│  ├─ retriever.py
-│  ├─ llm_client.py
-│  ├─ config.py
-│  ├─ requirements.txt
-│  └─ db_schema.sql
-├─ desktop/          # Electron 데스크톱 앱
-│  ├─ main.js        # 메인 프로세스 (백엔드 프로세스 관리)
-│  ├─ preload.js     # contextBridge IPC
-│  ├─ package.json   # electron-builder 설정 포함
-│  └─ src/renderer/  # UI (HTML/CSS/JS)
-│     ├─ index.html
-│     └─ app.js
-├─ scripts/
-│  ├─ dev.sh         # 개발용 실행 스크립트
-│  └─ build.sh       # 배포용 패키지 빌드 스크립트
-└─ assets/           # 앱 아이콘 등
+```text
+자연어 → Local SLM(3~5B) → Query DSL → Schema Validator → Tool Router
+   → API Connector → 공공 API → Data Processor(filter/sort/group/aggregate)
+   → 표/그래프/엑셀 + Local SLM의 자연어 설명
 ```
 
----
+LLM은 데이터를 직접 판단하거나 임의로 API를 호출하지 않는다. 오직 "어떤
+데이터를 어떻게 가져올지"를 나타내는 **Query DSL**을 생성할 뿐이고, 실제
+조회·필터링·집계는 검증된 프로그램 코드가 담당한다 (`docs/architecture/overview.md` 참고).
 
-## Windows 간편 설치 (배포판)
+## 저장소 구조
 
-릴리즈된 패키지가 GitHub Releases에 존재할 경우, 아래 한 줄로 설치할 수 있습니다.
-
-1. [`setup.bat`](./setup.bat) 파일을 다운로드합니다.
-2. 파일을 더블클릭하거나 명령 프롬프트에서 실행합니다.
-
-```bat
-setup.bat
+```text
+public-data-ai/
+├─ apps/desktop/       # Electron 앱 (main / preload / renderer)
+├─ core/               # LLM 연동, Query Planner, Tool Router, 캐시, 대화 저장, 데이터 가공
+├─ connectors/         # HIRA, 법제처 등 실제 API Connector
+├─ data/               # 코드 매핑 사전, 정규화 스키마
+├─ tests/              # Vitest 단위 테스트
+└─ docs/               # 아키텍처/API/라이선스 문서, 기술기획서
 ```
 
-스크립트가 자동으로:
-- GitHub Releases에서 최신 `AI-Law-Agent-win.zip` 아티팩트를 다운로드
-- `%USERPROFILE%\AI-Law-Agent` 경로에 압축 해제
-- `AI-Law-Agent.exe` 실행
+## 사전 요구 사항
 
-> **릴리즈 ZIP 이름 또는 설치 경로를 변경**하려면 `setup.bat` 상단의 `ASSET_NAME` / `INSTALL_DIR` 변수를 수정하세요.
+- Node.js 20+ (권장 22)
+- (선택) [llama.cpp](https://github.com/ggerganov/llama.cpp)의 `llama-server`로
+  구동한 3~5B급 GGUF 모델 — 없으면 자동으로 규칙 기반 폴백 SLM을 사용해
+  파이프라인 전체를 그대로 개발/테스트할 수 있다.
+- 공공데이터포털에서 발급받은 HIRA 서비스키, 법제처 오픈API 이용자 ID(OC)
 
----
-
-## 데스크톱 앱 실행 (개발)
-
-### 사전 요구 사항
-- Python 3.10+
-- Node.js 18+
-- PostgreSQL + pgvector
-- Ollama 또는 외부 LLM API
-
-### 1단계 — 저장소 클론 및 의존성 설치
+## 시작하기
 
 ```bash
 git clone https://github.com/Fullbatting/AI-Law-Agent.git
 cd AI-Law-Agent
-```
-
-### 2단계 — Python 백엔드 설치
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### 3단계 — Electron 의존성 설치
-
-```bash
-cd ../desktop
 npm install
+cp .env.example .env   # HIRA_SERVICE_KEY, LAW_API_OC 등을 채워 넣는다
 ```
 
-### 4단계 — 앱 실행
+### 개발 실행 (Electron)
 
 ```bash
-# 루트에서 한 번에 실행 (백엔드 + Electron)
-./scripts/dev.sh
-
-# 또는 개별 실행:
-# 터미널 1: 백엔드
-cd backend && python server.py
-
-# 터미널 2: Electron UI
-cd desktop && npm start
+npm start          # build 후 Electron 창을 띄운다
 ```
 
-Electron 창이 열리면 **대시보드 → 서버 시작** 버튼을 눌러 백엔드를 기동하세요.
+llama.cpp 서버(`LLAMA_SERVER_URL`, 기본 `http://127.0.0.1:8080`)가 떠 있지
+않으면 `core/llm/inference/ruleBasedFallback.ts`의 규칙 기반 폴백이 자동으로
+대신 동작한다 (개발/데모용).
 
----
+### 타입 체크 / 테스트
 
-## 데스크톱 앱 기능
+```bash
+npm run typecheck
+npm test
+```
 
-| 탭 | 기능 |
+### 배포 패키지 빌드
+
+```bash
+npm run package:win     # Windows NSIS 인스톨러
+npm run package:mac     # macOS DMG
+npm run package:linux   # Linux AppImage
+```
+
+결과물은 `release/` 폴더에 생성된다.
+
+## 환경 변수 (`.env`)
+
+| 변수 | 설명 |
 |---|---|
-| 대시보드 | 서버 시작/중지, 상태 확인 |
-| 질문하기 | `/query` SSE 스트리밍 질의 응답 |
-| 색인 관리 | `/index` 엔드포인트로 문서 색인 실행 |
-| 설정 | DATABASE_URL, LLM_URL 등 환경 변수 편집 및 저장 |
-| 로그 | 백엔드 stdout/stderr 실시간 표시 |
+| `HIRA_SERVICE_KEY` | 공공데이터포털 HIRA 병원정보서비스 서비스키 |
+| `LAW_API_OC` | 법제처 국가법령정보 오픈API 이용자 이메일 ID |
+| `LLAMA_SERVER_URL` | llama.cpp `llama-server` 엔드포인트 (기본 `http://127.0.0.1:8080`) |
+| `APP_DB_PATH` | 대화/캐시 SQLite 파일 경로 (Electron 실행 시 기본값은 `userData` 아래) |
 
----
+## 사용 예시 질문
 
-## 설치 패키지 빌드 (배포)
+- "서울에 있는 종합병원 목록을 보여줘."
+- "서울 종합병원 중 응급실이 있는 곳만 보여줘."
+- "병원명, 주소, 전화번호만 표로 만들어줘."
+- "지역별 병원 수를 집계해줘."
+- "이 결과를 엑셀로 저장해줘."
+- "개인정보를 수집할 때 적용되는 법령을 찾아줘."
 
-```bash
-# Windows 인스톨러
-./scripts/build.sh --win
+## 개발 단계 (Roadmap)
 
-# macOS DMG
-./scripts/build.sh --mac
+`docs/technical_plan.md` 23장 기준:
 
-# Linux AppImage
-./scripts/build.sh --linux
-```
+- **Phase 1 (현재)** — Electron + Local SLM + HIRA + 법제처 + Chat UI + SQLite 대화 저장
+- **Phase 2** — 필터/정렬/집계/그룹화, CSV·Excel 내보내기, API 캐시 (이 저장소는 Phase 1/2 핵심 파이프라인을 함께 갖추고 있다)
+- **Phase 3** — 여러 API 연속 호출, Join, Task Planning, 자동 재시도
+- **Phase 4** — Skill 단위 플랫폼 확장 (질병관리청, 식약처, 통계청 등)
 
-결과물은 `dist/` 폴더에 생성됩니다.
+## 라이선스
 
-> **Python 번들링**: 배포 시 Python을 함께 패키징하려면 `scripts/build.sh` 내의 PyInstaller 주석 블록을 활성화하세요.
-
----
-
-## 백엔드 API (직접 사용)
-
-```bash
-cd backend
-python server.py          # 기본 포트 8000
-
-# 색인
-python indexer.py --source sample_legal.json
-
-# 질의
-curl -X POST http://127.0.0.1:8000/query \
-     -H 'Content-Type: application/json' \
-     -d '{"question":"임대차 계약 해지 조건은?"}'
-```
-
-엔드포인트:
-- `POST /query` — SSE 스트리밍 응답
-- `GET  /health` — 상태 확인
-- `POST /index`  — 색인 실행 (SSE 스트리밍 로그)
-
----
-
-## 환경 변수 (.env 또는 앱 설정)
-
-| 변수 | 기본값 | 설명 |
-|---|---|---|
-| `DATABASE_URL` | `postgresql://localhost:5432/legaldb` | PostgreSQL 연결 문자열 |
-| `LLM_BACKEND` | `ollama` | LLM 백엔드 종류 |
-| `LLM_URL` | `http://localhost:11434` | LLM 서버 URL |
-| `EMBEDDING_MODEL` | `snunlp/KR-SBERT-V40K-kl` | 임베딩 모델 |
-| `EMBEDDING_DIM` | `768` | 임베딩 차원 |
-| `TOP_K` | `6` | 벡터 검색 상위 K |
-| `BM25_K` | `10` | BM25 상위 K |
-| `API_PORT` | `8000` | FastAPI 포트 |
+프로그램 소스는 [Apache License 2.0](LICENSE)을 따른다. Local SLM 모델과
+HIRA·법제처 데이터의 이용조건은 별도이므로 [`docs/license/README.md`](docs/license/README.md)를 반드시 확인한다.

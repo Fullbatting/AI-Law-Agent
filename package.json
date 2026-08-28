@@ -1,0 +1,68 @@
+{
+  "name": "public-data-ai",
+  "version": "0.1.0",
+  "description": "자연어로 공공데이터(HIRA, 법제처 등)를 검색·가공하는 로컬 SLM 기반 데스크톱 에이전트",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/main/index.js",
+  "license": "Apache-2.0",
+  "author": "Fullbatting",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "echo \"(lint 설정은 추후 추가 예정)\"",
+    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --external:better-sqlite3 --outfile=dist/main/index.js",
+    "build:preload": "esbuild apps/desktop/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js",
+    "build:renderer": "esbuild apps/desktop/renderer/main.tsx --bundle --platform=browser --outfile=dist/renderer/renderer.js",
+    "build:assets": "mkdir -p dist/renderer && cp apps/desktop/renderer/index.html apps/desktop/renderer/styles.css dist/renderer/",
+    "build": "npm run build:main && npm run build:preload && npm run build:renderer && npm run build:assets",
+    "dev:electron": "electron ./dist/main/index.js",
+    "start": "npm run build && npm run dev:electron",
+    "package:win": "npm run build && electron-builder --win",
+    "package:mac": "npm run build && electron-builder --mac",
+    "package:linux": "npm run build && electron-builder --linux"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "exceljs": "^4.4.0",
+    "fast-xml-parser": "^4.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^22.7.4",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "electron": "^32.1.2",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.2",
+    "vitest": "^2.1.1"
+  },
+  "build": {
+    "appId": "com.fullbatting.publicdataai",
+    "productName": "Public Data AI",
+    "directories": {
+      "output": "release"
+    },
+    "files": ["dist/**/*", "package.json"],
+    "extraResources": [
+      {
+        "from": "data",
+        "to": "data",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  }
+}

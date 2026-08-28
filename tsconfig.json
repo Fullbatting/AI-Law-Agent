@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "paths": {
+      "@core/*": ["core/*"],
+      "@connectors/*": ["connectors/*"],
+      "@data/*": ["data/*"]
+    }
+  },
+  "include": [
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "core/**/*.ts",
+    "connectors/**/*.ts",
+    "data/**/*.ts",
+    "tests/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

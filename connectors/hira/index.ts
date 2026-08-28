@@ -1,0 +1,1 @@
+export { HiraHospitalConnector } from "./hospital";
