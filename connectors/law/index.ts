@@ -1,0 +1,1 @@
+export { LawSearchConnector } from "./search";
