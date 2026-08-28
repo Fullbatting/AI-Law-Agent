@@ -7,12 +7,15 @@
   "main": "dist/main/index.js",
   "license": "Apache-2.0",
   "author": "Fullbatting",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "echo \"(lint 설정은 추후 추가 예정)\"",
-    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --external:better-sqlite3 --outfile=dist/main/index.js",
+    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --outfile=dist/main/index.js",
     "build:preload": "esbuild apps/desktop/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js",
     "build:renderer": "esbuild apps/desktop/renderer/main.tsx --bundle --platform=browser --outfile=dist/renderer/renderer.js",
     "build:assets": "mkdir -p dist/renderer && cp apps/desktop/renderer/index.html apps/desktop/renderer/styles.css dist/renderer/",
@@ -24,7 +27,6 @@
     "package:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "exceljs": "^4.4.0",
     "fast-xml-parser": "^4.5.0",
     "react": "^18.3.1",
@@ -32,7 +34,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.7.4",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",

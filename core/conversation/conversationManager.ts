@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { AppDatabase } from "../db/schema";
 import type { QueryDSL } from "../query/dsl/types";
 import type { NormalizedResult } from "../types/domain";
 
@@ -22,8 +22,22 @@ export interface MessageRecord {
  * 대화·API 호출·API 응답 이력 저장 및 삭제를 담당한다 (기술기획서 11장).
  * UI의 "[현재 대화 삭제] / [선택한 대화 삭제] / [전체 대화 삭제]" 기능을 그대로 지원한다.
  */
+interface ConversationRow {
+  id: number;
+  title: string;
+  created_at: string;
+}
+
+interface MessageRow {
+  id: number;
+  conversation_id: number;
+  role: MessageRole;
+  content: string;
+  created_at: string;
+}
+
 export class ConversationManager {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly db: AppDatabase) {}
 
   createConversation(title = "새 대화"): ConversationSummary {
     const info = this.db
@@ -34,19 +48,15 @@ export class ConversationManager {
 
   getConversation(id: number): ConversationSummary | undefined {
     const row = this.db
-      .prepare<[number], { id: number; title: string; created_at: string }>(
-        "SELECT id, title, created_at FROM conversations WHERE id = ?"
-      )
-      .get(id);
+      .prepare("SELECT id, title, created_at FROM conversations WHERE id = ?")
+      .get(id) as unknown as ConversationRow | undefined;
     return row ? { id: row.id, title: row.title, createdAt: row.created_at } : undefined;
   }
 
   listConversations(): ConversationSummary[] {
     const rows = this.db
-      .prepare<[], { id: number; title: string; created_at: string }>(
-        "SELECT id, title, created_at FROM conversations ORDER BY created_at DESC"
-      )
-      .all();
+      .prepare("SELECT id, title, created_at FROM conversations ORDER BY created_at DESC")
+      .all() as unknown as ConversationRow[];
     return rows.map((r) => ({ id: r.id, title: r.title, createdAt: r.created_at }));
   }
 
@@ -56,10 +66,10 @@ export class ConversationManager {
       .run(conversationId, role, content);
     const id = Number(info.lastInsertRowid);
     const row = this.db
-      .prepare<[number], { id: number; conversation_id: number; role: MessageRole; content: string; created_at: string }>(
+      .prepare(
         "SELECT id, conversation_id, role, content, created_at FROM messages WHERE id = ?"
       )
-      .get(id)!;
+      .get(id) as unknown as MessageRow;
     return {
       id: row.id,
       conversationId: row.conversation_id,
@@ -71,10 +81,10 @@ export class ConversationManager {
 
   listMessages(conversationId: number): MessageRecord[] {
     const rows = this.db
-      .prepare<[number], { id: number; conversation_id: number; role: MessageRole; content: string; created_at: string }>(
+      .prepare(
         "SELECT id, conversation_id, role, content, created_at FROM messages WHERE conversation_id = ? ORDER BY created_at ASC"
       )
-      .all(conversationId);
+      .all(conversationId) as unknown as MessageRow[];
     return rows.map((r) => ({
       id: r.id,
       conversationId: r.conversation_id,
@@ -101,11 +111,16 @@ export class ConversationManager {
   }
 
   deleteConversations(ids: number[]): void {
+    if (ids.length === 0) return;
     const stmt = this.db.prepare("DELETE FROM conversations WHERE id = ?");
-    const tx = this.db.transaction((idList: number[]) => {
-      for (const id of idList) stmt.run(id);
-    });
-    tx(ids);
+    this.db.exec("BEGIN");
+    try {
+      for (const id of ids) stmt.run(id);
+      this.db.exec("COMMIT");
+    } catch (err) {
+      this.db.exec("ROLLBACK");
+      throw err;
+    }
   }
 
   deleteAllConversations(): void {

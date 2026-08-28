@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { AppDatabase } from "./db/schema";
 import { ToolRegistry } from "./tools/registry";
 import { ToolRouter } from "./tools/router";
 import { PermissionManager } from "./permission/permissionManager";
@@ -31,7 +31,7 @@ export class AppCore {
   readonly cache: CacheManager;
   readonly conversations: ConversationManager;
 
-  constructor(db: Database.Database, slm: SlmRuntime) {
+  constructor(db: AppDatabase, slm: SlmRuntime) {
     this.registry = new ToolRegistry();
     const permissions = new PermissionManager(this.registry);
     this.router = new ToolRouter(this.registry, permissions);

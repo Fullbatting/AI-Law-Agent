@@ -28,6 +28,16 @@ for /f "tokens=*" %%v in ('node -v') do set "NODE_VERSION=%%v"
 echo [확인] Node.js %NODE_VERSION% 감지됨.
 echo.
 
+rem 1-1) Node 내장 sqlite 모듈 사용 가능 여부 확인 (버전 22.5 미만이면 없음)
+node -e "require('node:sqlite')" >nul 2>nul
+if errorlevel 1 (
+    echo [오류] 현재 Node.js 버전에서는 내장 SQLite 기능을 사용할 수 없습니다.
+    echo        https://nodejs.org 에서 Node.js 22.5 이상 버전을 설치한 뒤
+    echo        이 스크립트를 다시 실행하세요.
+    echo.
+    goto :end
+)
+
 rem 2) 이 배치파일이 있는 폴더로 이동 (프로젝트 루트)
 cd /d "%~dp0"
 
@@ -37,9 +47,9 @@ call npm install
 if errorlevel 1 (
     echo.
     echo [오류] npm install에 실패했습니다. 위 로그를 확인하세요.
-    echo        better-sqlite3 등 네이티브 모듈 설치가 실패했다면
-    echo        Visual Studio Build Tools를 설치한 뒤 다시 시도하세요.
-    echo        설치 시 워크로드 목록에서 Desktop development with C++ 를 선택하세요.
+    echo        네이티브 모듈 컴파일 오류라면 Visual Studio Build Tools를
+    echo        설치한 뒤 다시 시도하세요. 설치 시 워크로드 목록에서
+    echo        Desktop development with C++ 를 선택하세요.
     echo        https://visualstudio.microsoft.com/visual-cpp-build-tools/
     goto :end
 )

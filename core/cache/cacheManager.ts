@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import type Database from "better-sqlite3";
+import type { AppDatabase } from "../db/schema";
 import type { NormalizedResult } from "../types/domain";
 import type { QueryDSL } from "../query/dsl/types";
 
@@ -16,17 +16,15 @@ const FALLBACK_TTL_SECONDS = 60 * 60 * 6; // 미지정 Connector 기본 6시간
 
 export class CacheManager {
   constructor(
-    private readonly db: Database.Database,
+    private readonly db: AppDatabase,
     private readonly ttlBySource: Record<string, number> = DEFAULT_TTL_SECONDS
   ) {}
 
   get(dsl: QueryDSL): NormalizedResult | undefined {
     const key = this.hashQuery(dsl);
     const row = this.db
-      .prepare<[string], { value_json: string; expires_at: string }>(
-        "SELECT value_json, expires_at FROM cache WHERE cache_key = ?"
-      )
-      .get(key);
+      .prepare("SELECT value_json, expires_at FROM cache WHERE cache_key = ?")
+      .get(key) as { value_json: string; expires_at: string } | undefined;
     if (!row) return undefined;
     if (new Date(row.expires_at).getTime() < Date.now()) {
       this.db.prepare("DELETE FROM cache WHERE cache_key = ?").run(key);

@@ -35,7 +35,8 @@ public-data-ai/
 
 ## 사전 요구 사항
 
-- Node.js 20+ (권장 22) — [nodejs.org](https://nodejs.org)에서 LTS 버전 설치
+- Node.js 22.5 이상 (Node 내장 `node:sqlite` 모듈 사용) — [nodejs.org](https://nodejs.org)에서 설치.
+  네이티브 애드온 컴파일이 필요 없어 별도의 빌드 도구 설치 없이 `npm install`만으로 동작한다.
 - (선택) [llama.cpp](https://github.com/ggerganov/llama.cpp)의 `llama-server`로
   구동한 3~5B급 GGUF 모델 — 없으면 자동으로 규칙 기반 폴백 SLM을 사용해
   파이프라인 전체를 그대로 개발/테스트할 수 있다.
