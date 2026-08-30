@@ -124,14 +124,18 @@ body {
 .model-status {
   font-size: 12px;
   color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
+/* 로드된 모델 파일명은 한 줄로 잘라서 보여주고, 전체 경로는 title 툴팁으로 확인한다 */
 .model-status-loaded {
   color: #16a34a;
   font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .model-status-error {
