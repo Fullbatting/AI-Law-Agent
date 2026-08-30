@@ -10,6 +10,33 @@
    → 원본 데이터 → Data Processor → 결과 → SLM → 사용자
 ```
 
+## 로컬 저장소로 sql.js를 쓰는 이유
+
+`core/db/schema.ts`는 네이티브 애드온이 아니라 [sql.js](https://sql.js.org)
+(WebAssembly로 컴파일된 SQLite)를 쓴다. 실제로 Electron에서 직접 검증해보고
+내린 결정이다:
+
+- `better-sqlite3` — Windows에서 사전 빌드 바이너리가 있어도 npm이
+  `binding.gyp` 존재만으로 `node-gyp rebuild`를 자동 실행해 Visual Studio
+  Build Tools 없는 PC에서 설치가 실패했다. `@electron/rebuild`로 Electron용
+  바이너리를 다시 받아도 실제 Electron 프로세스 안에서 실행하면 **SIGSEGV로
+  죽었다** (N-API 기반이라 Node/Electron 어디서나 안전할 거라 예상했지만
+  실측 결과는 아니었다).
+- Node 내장 `node:sqlite` — 시스템에 설치된 Node가 아무리 최신이어도
+  **Electron 메인 프로세스는 Electron이 자체 내장한 Node로 돈다** (예:
+  Electron 32는 Node 20.18.1을 내장하며, 이 버전엔 `node:sqlite`가
+  아예 없다). 그래서 `npm install`/타입체크/테스트는 다 통과해도 실제
+  앱 실행 시 `ERR_UNKNOWN_BUILTIN_MODULE`로 즉시 죽었다.
+- sql.js는 순수 WASM이라 네이티브 바인딩/ABI 문제 자체가 없다. 실제로
+  헤드리스 Electron에서 앱을 띄워 SQLite 파일이 정상 생성되는 것까지
+  확인했다. 대신 `.export()`로 통째로 직렬화해 파일에 써야 해서, 매
+  쓰기 작업 후 전체 DB를 디스크에 다시 쓴다 — 이 프로젝트 규모(로컬
+  대화/캐시)에서는 문제되지 않는다.
+
+`AppDatabase`/`PreparedStatement` 어댑터가 `.prepare(sql).run()/.get()/.all()`
+같은 익숙한 모양을 그대로 유지해줘서, `CacheManager`/`ConversationManager`
+쪽 코드는 DB 구현이 세 번 바뀌는 동안 전혀 손대지 않았다.
+
 ## SLM 런타임 우선순위
 
 `AppCore`가 `QueryPlanner`에 넘기는 `SlmRuntime`은 매 질의마다 다음 순서로
@@ -49,6 +76,7 @@ Query Planner/Tool Router 이하 코드는 어떤 런타임이 실제로 쓰이�
 | `core/permission` | 등록되지 않은 source/entity, 과도한 limit 차단 | 25장 |
 | `core/query` | Query DSL 타입 정의 및 Zod 검증기 | 10장 |
 | `core/dataProcessing` | filter/sort/group/aggregate/select/join 파이프라인 | 9장, 10장 |
+| `core/db/schema.ts` | sql.js(WASM SQLite) 위에 better-sqlite3 스타일 API(`prepare().run()/.get()/.all()`)를 얹은 어댑터 + 스키마 | 11장 |
 | `core/cache` | Connector별 TTL을 적용한 SQLite 캐시 | 12장 |
 | `core/conversation` | 대화/메시지/API 호출 이력 저장 및 삭제 | 11장 |
 | `core/export` | Excel/CSV 내보내기 | 9장, 13장 |

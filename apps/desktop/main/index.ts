@@ -28,7 +28,7 @@ function getModelSettingsPath(): string {
 }
 
 async function initAppCore(): Promise<AppCore> {
-  const db = openDatabase(getDbPath());
+  const db = await openDatabase(getDbPath());
   // 사용자가 GGUF 모델을 업로드하지 않았거나 로드에 실패했을 때 쓸 폴백
   // (llama.cpp 서버가 떠 있으면 그것을, 아니면 규칙 기반 폴백을 자동 선택한다).
   const fallbackRuntime = await createSlmRuntime();

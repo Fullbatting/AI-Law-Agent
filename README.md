@@ -35,8 +35,10 @@ public-data-ai/
 
 ## 사전 요구 사항
 
-- Node.js 22.5 이상 (Node 내장 `node:sqlite` 모듈 사용) — [nodejs.org](https://nodejs.org)에서 설치.
-  네이티브 애드온 컴파일이 필요 없어 별도의 빌드 도구 설치 없이 `npm install`만으로 동작한다.
+- Node.js 18 이상 — [nodejs.org](https://nodejs.org)에서 설치.
+  대화·캐시 저장에는 [sql.js](https://sql.js.org)(WebAssembly로 컴파일된 SQLite)를
+  쓰기 때문에 네이티브 애드온 컴파일이나 별도 빌드 도구 없이 `npm install`만으로 동작하고,
+  Electron이 내장한 Node 버전과도 무관하게 항상 동일하게 동작한다.
 - (선택) 3~5B급 **GGUF 모델 파일** — 앱을 실행한 뒤 사이드바에서 파일을
   선택하기만 하면 된다 (아래 "로컬 SLM(GGUF) 사용하기" 참고). 모델을
   올리지 않아도 규칙 기반 폴백 SLM으로 파이프라인 전체를 그대로 개발/테스트할 수 있다.

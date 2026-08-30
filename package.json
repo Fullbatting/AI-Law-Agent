@@ -8,14 +8,14 @@
   "license": "Apache-2.0",
   "author": "Fullbatting",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=18.0.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "echo \"(lint 설정은 추후 추가 예정)\"",
-    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --external:node-llama-cpp --outfile=dist/main/index.js",
+    "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --external:node-llama-cpp --external:sql.js --outfile=dist/main/index.js",
     "build:preload": "esbuild apps/desktop/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js",
     "build:renderer": "esbuild apps/desktop/renderer/main.tsx --bundle --platform=browser --outfile=dist/renderer/renderer.js",
     "build:assets": "mkdir -p dist/renderer && cp apps/desktop/renderer/index.html apps/desktop/renderer/styles.css dist/renderer/",
@@ -32,12 +32,14 @@
     "node-llama-cpp": "^3.20.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sql.js": "^1.14.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
+    "@types/sql.js": "^1.4.11",
     "electron": "^32.1.2",
     "electron-builder": "^25.1.8",
     "esbuild": "^0.24.0",
@@ -54,7 +56,8 @@
       "dist/**/*",
       "package.json",
       "node_modules/node-llama-cpp/**/*",
-      "node_modules/@node-llama-cpp/**/*"
+      "node_modules/@node-llama-cpp/**/*",
+      "node_modules/sql.js/**/*"
     ],
     "asarUnpack": [
       "node_modules/node-llama-cpp/**/*",
