@@ -1,82 +1,103 @@
 @echo off
-rem 더블클릭으로 실행해도 창이 즉시 닫히지 않도록, 아직 재실행 표시(__RUN__)가
-rem 없으면 새 cmd 창에서 이 스크립트를 다시 실행한다. 아래의 pause가 모든
-rem 종료 경로에서 키를 기다리므로 cmd /c로도 자동 종료 전에 로그를 확인할 수 있다.
+rem This installer is intentionally plain ASCII, English-only. Korean text
+rem combined with chcp 65001 has broken this batch file before (the
+rem console codepage got misread by Windows and every word after it errored
+rem out as "not recognized as an internal command"). The app itself stays
+rem Korean; only these setup scripts stay ASCII so they cannot break the
+rem same way again.
+setlocal enabledelayedexpansion
+
+rem Relaunch in a new console window so a double-click never closes before
+rem the user can read the log. Every exit path below funnels into the
+rem "pause" near the end, so cmd /c will close the window once the user
+rem presses a key.
 if /I not "%~1"=="__RUN__" (
-    start "Public Data AI 설치" cmd /c "%~f0" __RUN__
+    start "Public Data AI Setup" cmd /c "%~f0" __RUN__
     exit /b
 )
 
-chcp 65001 >nul
-setlocal
-
 echo ================================================
-echo  Public Data AI - Windows 설치 스크립트
+echo  Public Data AI - Windows Setup
 echo ================================================
 echo.
 
-rem 1) Node.js 설치 확인
+rem Best-effort cleanup: if a previous run crashed and left this app's
+rem electron.exe process running in the background, it can hold files
+rem locked (access denied) during npm install / build. This is scoped to
+rem processes whose command line points at this project's own folder, so
+rem it will not touch other Electron apps like VS Code or Slack.
+where powershell >nul 2>nul
+if not errorlevel 1 (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\stop-app.ps1" -ProjectDir "%~dp0" >nul 2>nul
+)
+
+rem 1) Check Node.js
 where node >nul 2>nul
 if errorlevel 1 (
-    echo [오류] Node.js가 설치되어 있지 않습니다.
-    echo        https://nodejs.org 에서 LTS 버전을 설치한 뒤
-    echo        이 스크립트를 다시 실행하세요.
+    echo [ERROR] Node.js is not installed.
+    echo         Install it from https://nodejs.org then run this again.
     echo.
     goto :end
 )
 
 for /f "tokens=*" %%v in ('node -v') do set "NODE_VERSION=%%v"
-echo [확인] Node.js %NODE_VERSION% 감지됨.
+echo [OK] Found Node.js !NODE_VERSION!.
 echo.
 
-rem 2) 이 배치파일이 있는 폴더로 이동 (프로젝트 루트)
+rem 2) Move to the folder this batch file is in (the project root)
 cd /d "%~dp0"
 
-rem 3) 의존성 설치
-echo [진행] npm install 실행 중... 인터넷 상황에 따라 수 분 소요될 수 있습니다.
+rem 3) Install dependencies
+echo [1/3] Running npm install... this can take a few minutes depending on
+echo       your internet connection.
 call npm install
 if errorlevel 1 (
     echo.
-    echo [오류] npm install에 실패했습니다. 위 로그를 확인하세요.
-    echo        네이티브 모듈 컴파일 오류라면 Visual Studio Build Tools를
-    echo        설치한 뒤 다시 시도하세요. 설치 시 워크로드 목록에서
-    echo        Desktop development with C++ 를 선택하세요.
-    echo        https://visualstudio.microsoft.com/visual-cpp-build-tools/
+    echo [ERROR] npm install failed. See the log above.
+    echo         If it mentions a native module compile error, install
+    echo         "Visual Studio Build Tools" with the "Desktop development
+    echo         with C++" workload, then run this again.
+    echo         https://visualstudio.microsoft.com/visual-cpp-build-tools/
     goto :end
 )
 echo.
 
-rem 4) 환경 변수 파일(.env) 준비
+rem 4) Prepare the .env file
 if not exist ".env" (
     if exist ".env.example" (
         copy ".env.example" ".env" >nul
-        echo [생성] .env 파일을 .env.example로부터 생성했습니다.
-        echo        HIRA_SERVICE_KEY, LAW_API_OC 값을 채워 넣어야
-        echo        실제 공공데이터 API를 호출할 수 있습니다.
+        echo [2/3] Created .env from .env.example.
+        echo       Fill in HIRA_SERVICE_KEY and LAW_API_OC to call the real
+        echo       public data APIs.
     )
 ) else (
-    echo [확인] 기존 .env 파일을 그대로 사용합니다.
+    echo [2/3] Keeping the existing .env file.
 )
 echo.
 
-rem 5) 앱 빌드 (main / preload / renderer 번들)
-echo [진행] 앱을 빌드하는 중...
+rem 5) Build the app (main / preload / renderer bundles)
+rem Remove any previous build output first, so a stale file from an older
+rem version of this project can never end up mixed in with a fresh build.
+if exist "dist" (
+    rd /s /q "dist"
+)
+echo [3/3] Building the app...
 call npm run build
 if errorlevel 1 (
     echo.
-    echo [오류] 빌드에 실패했습니다. 위 로그를 확인하세요.
+    echo [ERROR] Build failed. See the log above.
     goto :end
 )
 
 echo.
 echo ================================================
-echo  설치가 완료되었습니다!
+echo  Setup complete!
 echo.
-echo  - .env 파일을 열어 API 키를 입력하세요.
-echo  - run.bat 을 실행하면 프로그램이 시작됩니다.
+echo  - Open .env and fill in your API keys.
+echo  - Run run.bat to start the app.
 echo ================================================
 
 :end
 echo.
-echo 이 창은 아무 키나 누르면 닫힙니다.
+echo Press any key to close this window.
 pause >nul

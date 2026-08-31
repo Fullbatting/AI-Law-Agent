@@ -32,6 +32,12 @@
   확인했다. 대신 `.export()`로 통째로 직렬화해 파일에 써야 해서, 매
   쓰기 작업 후 전체 DB를 디스크에 다시 쓴다 — 이 프로젝트 규모(로컬
   대화/캐시)에서는 문제되지 않는다.
+- 다만 이 방식은 실제 SQLite 파일과 달리 여러 프로세스가 동시에 같은
+  파일에 써도 막아주는 잠금이 없다 — 두 인스턴스가 동시에 뜨면 나중에
+  저장한 쪽이 앞선 대화 기록을 조용히 덮어쓸 수 있다. 그래서
+  `apps/desktop/main/index.ts`에 `app.requestSingleInstanceLock()`을
+  걸어 앱을 두 번 띄우는 것 자체를 막는다(두 번째 실행은 기존 창을
+  포커스만 하고 종료된다).
 
 `AppDatabase`/`PreparedStatement` 어댑터가 `.prepare(sql).run()/.get()/.all()`
 같은 익숙한 모양을 그대로 유지해줘서, `CacheManager`/`ConversationManager`

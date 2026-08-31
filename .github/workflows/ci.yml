@@ -22,3 +22,5 @@ jobs:
         run: npm run typecheck
       - name: Run tests
         run: npm test
+      - name: Check installer scripts stay pure ASCII
+        run: npm run check:bat-ascii

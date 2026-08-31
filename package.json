@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "echo \"(lint 설정은 추후 추가 예정)\"",
+    "check:bat-ascii": "node scripts/checkBatchAscii.js",
     "build:main": "esbuild apps/desktop/main/index.ts --bundle --platform=node --external:electron --external:node-llama-cpp --external:sql.js --outfile=dist/main/index.js",
     "build:preload": "esbuild apps/desktop/preload/index.ts --bundle --platform=node --external:electron --outfile=dist/preload/index.js",
     "build:renderer": "esbuild apps/desktop/renderer/main.tsx --bundle --platform=browser --outfile=dist/renderer/renderer.js",

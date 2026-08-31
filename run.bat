@@ -1,38 +1,38 @@
 @echo off
-rem 더블클릭으로 실행해도 창이 즉시 닫히지 않도록, 아직 재실행 표시(__RUN__)가
-rem 없으면 새 cmd 창에서 이 스크립트를 다시 실행한다. 아래의 pause가 모든
-rem 종료 경로에서 키를 기다리므로 cmd /c로도 자동 종료 전에 로그를 확인할 수 있다.
+rem Plain ASCII, English-only on purpose - see the comment at the top of
+rem install.bat for why.
+setlocal enabledelayedexpansion
+
+rem Relaunch in a new console window so a double-click never closes before
+rem the user can read the log.
 if /I not "%~1"=="__RUN__" (
     start "Public Data AI" cmd /c "%~f0" __RUN__
     exit /b
 )
 
-chcp 65001 >nul
-setlocal
-
 cd /d "%~dp0"
 
 if not exist "node_modules" (
-    echo [오류] node_modules 폴더가 없습니다. 먼저 install.bat 을 실행하세요.
+    echo [ERROR] The node_modules folder is missing. Run install.bat first.
     goto :end
 )
 
 if not exist ".env" (
-    echo [경고] .env 파일이 없습니다. install.bat 을 먼저 실행하거나
-    echo        .env.example 을 복사해 .env 로 만든 뒤 API 키를 채워 넣으세요.
+    echo [WARNING] No .env file found. Run install.bat first, or copy
+    echo           .env.example to .env and fill in your API keys.
     echo.
 )
 
-echo [진행] Public Data AI 를 시작합니다...
+echo Starting Public Data AI...
 call npm run dev:electron
 if errorlevel 1 (
     echo.
-    echo [오류] 실행에 실패했습니다. dist 폴더가 비어있다면 install.bat 을
-    echo        다시 실행해 빌드를 완료하세요.
+    echo [ERROR] Failed to start. If the dist folder is empty, run
+    echo         install.bat again to finish building.
     goto :end
 )
 
 :end
 echo.
-echo 이 창은 아무 키나 누르면 닫힙니다.
+echo Press any key to close this window.
 pause >nul

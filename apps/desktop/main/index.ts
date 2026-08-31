@@ -19,6 +19,25 @@ import type { NormalizedResult } from "../../../core/types/domain";
 let mainWindow: BrowserWindow | null = null;
 let appCore: AppCore | null = null;
 
+/**
+ * 두 인스턴스가 동시에 뜨는 것을 막는다. sql.js는 DB 전체를 메모리에 올려두고
+ * 쓸 때마다 파일 전체를 다시 쓰는 방식이라(core/db/schema.ts 참고), 실제
+ * SQLite 파일과 달리 여러 프로세스가 동시에 같은 파일에 쓰면 나중에 저장한
+ * 쪽이 앞선 쪽을 조용히 덮어써 대화 기록이 사라질 수 있다. 사용자가
+ * run.bat을 두 번 누르는 등으로 이 상황이 생기지 않도록 먼저 막는다.
+ */
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 function getDbPath(): string {
   return process.env.APP_DB_PATH ?? path.join(app.getPath("userData"), "app.sqlite3");
 }
@@ -65,15 +84,17 @@ function createWindow(): void {
   });
 }
 
-app.whenReady().then(async () => {
-  appCore = await initAppCore();
-  registerIpcHandlers(appCore);
-  createWindow();
+if (gotSingleInstanceLock) {
+  app.whenReady().then(async () => {
+    appCore = await initAppCore();
+    registerIpcHandlers(appCore);
+    createWindow();
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
   });
-});
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

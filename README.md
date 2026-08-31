@@ -95,6 +95,19 @@ GGUF 모델을 **Electron 프로세스 안에서 직접** 구동한다. 별도�
   `install.bat` 을 직접 입력해 실행하면, 창이 사용자가 직접 연 것이라 어떤
   경우에도 닫히지 않고 전체 로그를 확인할 수 있다.
 
+`install.bat`/`run.bat`/`scripts\build-installer.bat`은 의도적으로 **순수
+ASCII, 영어 안내문만** 쓴다 — 앱 자체는 계속 한글이지만, 배치파일에 한글을
+섞고 `chcp 65001`에 기대는 방식은 이 프로젝트에서 실제로 두 번 실행을
+깨뜨린 전력이 있다(코드페이지를 잘못 해석해 단어 하나하나가 "내부 명령이
+아닙니다" 오류로 이어짐). `npm run check:bat-ascii`가 이 규칙을 CI에서
+계속 검사한다. 재설치 시 이전 실행이 비정상 종료해 백그라운드에 남은
+프로세스가 파일을 잠그는 문제도 `install.bat`이 시작할 때
+`scripts\stop-app.ps1`로(이 프로젝트 폴더를 가리키는 프로세스만 골라)
+정리한다. 또한 앱 자체에도 `app.requestSingleInstanceLock()`을 걸어 두 개를
+동시에 띄우는 것 자체를 막는다 — sql.js는 실제 SQLite 파일과 달리 여러
+프로세스가 동시에 써도 막아주지 않아서, 두 인스턴스가 동시에 뜨면 나중에
+저장한 쪽이 앞선 대화 기록을 조용히 덮어쓸 수 있기 때문이다.
+
 > 배포용 단일 설치 프로그램(.exe 인스톨러)이 필요하다면
 > `scripts\build-installer.bat`을 실행한다. `electron-builder`로 NSIS
 > 인스톨러를 만들어 `release\` 폴더에 생성한다 (배포 대상 PC에는 Node.js가
