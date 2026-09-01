@@ -132,6 +132,23 @@ describe("HiraHospitalConnector", () => {
     await expect(connector.request(connector.buildParams(dsl))).rejects.toThrow(/Decoding/);
   });
 
+  it("HTTP 403이면서 서버가 본문에 사유를 담아 보내면 그 내용을 그대로 보여준다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        text: async () =>
+          `<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>APPLICATION_ERROR</errMsg><returnAuthMsg>UNREGISTERED_ACTIVE_APPLICATION_KEY</returnAuthMsg></cmmMsgHeader></OpenAPI_ServiceResponse>`,
+      })
+    );
+    const connector = new HiraHospitalConnector(undefined, () => "TEST_KEY");
+    await expect(connector.request(connector.buildParams(dsl))).rejects.toThrow(
+      /UNREGISTERED_ACTIVE_APPLICATION_KEY/
+    );
+  });
+
   it("이미 URL 인코딩된 서비스키를 붙여넣어도 이중 인코딩되지 않는다", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

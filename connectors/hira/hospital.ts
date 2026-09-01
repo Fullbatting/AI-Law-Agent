@@ -79,11 +79,15 @@ export class HiraHospitalConnector implements ApiConnector {
       rawText = await this.apiClient.get(url.toString());
     } catch (err) {
       if (err instanceof ApiRequestError && err.status === 403) {
+        const detail = extractErrorDetail(err.body);
         throw new Error(
-          "HIRA API가 서비스키를 거부했습니다(HTTP 403). 공공데이터포털에서 " +
-            "'일반 인증키(Encoding)'가 아닌 '일반 인증키(Decoding)' 값을 " +
-            "설정 화면에 입력했는지 확인하세요. 방금 활용신청을 했다면 " +
-            "승인까지 몇 분~몇 시간이 걸릴 수 있으니 잠시 후 다시 시도하세요."
+          "HIRA API가 서비스키를 거부했습니다(HTTP 403)." +
+            (detail ? ` 서버 응답: ${detail}` : "") +
+            " 다음을 확인하세요: 1) 공공데이터포털에서 '일반 인증키(Encoding)'가 아닌 " +
+            "'일반 인증키(Decoding)' 값을 입력했는지, 2) 공공데이터포털 마이페이지에서 " +
+            "'건강보험심사평가원_병원정보서비스'에 대한 활용신청이 '승인'으로 표시되는지 " +
+            "(신청 직후라면 승인까지 몇 분~몇 시간이 걸릴 수 있습니다), 3) 활용기간이 " +
+            "만료되지 않았는지."
         );
       }
       throw err;
@@ -174,4 +178,23 @@ function boolFromYn(v: unknown): boolean | null {
   if (s === "Y" || s === "1" || s === "TRUE") return true;
   if (s === "N" || s === "0" || s === "FALSE") return false;
   return null;
+}
+
+/**
+ * HTTP 오류 응답 본문에서 사람이 읽을 수 있는 사유를 뽑아낸다.
+ * 공공데이터포털류 API는 4xx/5xx여도 본문에 구체적인 errMsg를 담아 돌려주는
+ * 경우가 많아, 파싱에 성공하면 그 메시지를, 실패하면 원문 일부를 그대로
+ * 보여준다 — "HTTP 403 Forbidden"만으로는 알 수 없는 진짜 원인을 드러낸다.
+ */
+function extractErrorDetail(body: string): string | null {
+  if (!body || !body.trim()) return null;
+  try {
+    const parsed = parseApiResponse(body);
+    const { isError, message } = isPublicDataApiError(parsed);
+    if (isError && message) return message;
+  } catch {
+    // 파싱 실패 시 원본 일부라도 보여준다.
+  }
+  const trimmed = body.trim();
+  return trimmed.length > 200 ? `${trimmed.slice(0, 200)}...` : trimmed;
 }

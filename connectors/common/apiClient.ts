@@ -24,7 +24,12 @@ export class ApiClient {
         });
         clearTimeout(timer);
         if (!res.ok) {
-          throw new ApiRequestError(`HTTP ${res.status} ${res.statusText}`, res.status, url);
+          // 응답 본문을 버리지 않고 에러에 함께 담아준다 — 공공데이터포털류
+          // API는 4xx/5xx여도 본문에 구체적인 사유(errMsg 등)를 담아 돌려주는
+          // 경우가 많은데, 본문을 읽지 않으면 "HTTP 403 Forbidden"처럼
+          // 원인을 알 수 없는 메시지만 남아 사용자가 다음 조치를 알 수 없다.
+          const body = await res.text().catch(() => "");
+          throw new ApiRequestError(`HTTP ${res.status} ${res.statusText}`, res.status, url, body);
         }
         return await res.text();
       } catch (err) {
@@ -47,7 +52,9 @@ export class ApiRequestError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly url: string
+    public readonly url: string,
+    /** 서버가 돌려준 응답 본문(있다면). 구체적인 오류 사유가 여기 담겨있는 경우가 많다. */
+    public readonly body: string = ""
   ) {
     super(message);
     this.name = "ApiRequestError";
