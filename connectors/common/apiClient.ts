@@ -17,7 +17,11 @@ export class ApiClient {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
       try {
-        const res = await fetch(url, { signal: controller.signal });
+        const headers = { ...this.defaults.headers, ...options.headers };
+        const res = await fetch(url, {
+          signal: controller.signal,
+          headers: Object.keys(headers).length > 0 ? headers : undefined,
+        });
         clearTimeout(timer);
         if (!res.ok) {
           throw new ApiRequestError(`HTTP ${res.status} ${res.statusText}`, res.status, url);

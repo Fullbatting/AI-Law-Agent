@@ -8,9 +8,12 @@ import { ConversationManager } from "./conversation/conversationManager";
 import type { SlmRuntime } from "./llm/inference/types";
 import type { ModelManager } from "./llm/modelManager";
 import { SettingsManager } from "./settings/settingsManager";
+import { CustomApiConnector } from "../connectors/generic/customApiConnector";
 import type { NormalizedResult } from "./types/domain";
 import type { QueryDSL } from "./query/dsl/types";
 import { buildTemplateSummary } from "./llm/prompt/summarizePrompt";
+
+const CUSTOM_SOURCE_PREFIX = "custom:";
 
 export interface AskResult {
   ok: boolean;
@@ -53,6 +56,7 @@ export class AppCore {
   ) {
     this.settingsManager = settingsManager;
     this.registry = new ToolRegistry(defaultConnectors(settingsManager));
+    this.refreshCustomApis();
     const permissions = new PermissionManager(this.registry);
     this.router = new ToolRouter(this.registry, permissions);
     this.modelManager = modelManager;
@@ -62,6 +66,20 @@ export class AppCore {
     this.planner = new QueryPlanner(this.slmProvider, this.registry);
     this.cache = new CacheManager(db);
     this.conversations = new ConversationManager(db);
+  }
+
+  /**
+   * 설정 화면에서 등록/수정/삭제한 커스텀 API 목록을 registry에 다시
+   * 반영한다. "custom:" 접두사가 붙은 Connector를 전부 지우고 최신
+   * SettingsManager.getCustomApis()로 새로 등록하는 방식이라, 앱을
+   * 재시작하지 않아도 다음 질문부터 바로 반영된다. 커스텀 API를
+   * 추가/수정/삭제하는 IPC 핸들러가 설정을 바꾼 직후 이 메서드를 호출한다.
+   */
+  refreshCustomApis(): void {
+    this.registry.removeBySourcePrefix(CUSTOM_SOURCE_PREFIX);
+    for (const config of this.settingsManager.getCustomApis()) {
+      this.registry.register(new CustomApiConnector(config));
+    }
   }
 
   /**

@@ -1,4 +1,5 @@
 import type { SlmRuntime } from "./types";
+import type { CustomApiConfig } from "../../settings/settingsManager";
 import { LlamaCppRuntime } from "./llamaCppRuntime";
 import { RuleBasedFallbackRuntime } from "./ruleBasedFallback";
 
@@ -11,13 +12,19 @@ export { RuleBasedFallbackRuntime } from "./ruleBasedFallback";
  * 없으면(로컬 모델 미설치 등) 규칙 기반 폴백으로 자동 전환한다.
  * 기술기획서 17.1절의 "파인튜닝 이전, 프롬프트 기반 검증" 단계를 개발 환경에서
  * 실제 모델 없이도 그대로 재현하기 위한 장치다.
+ *
+ * @param getCustomApis 규칙 기반 폴백이 등록된 커스텀 API로도 질문을 자동
+ * 분류할 수 있도록 넘긴다(core/llm/inference/ruleBasedFallback.ts 참고).
  */
-export async function createSlmRuntime(baseUrl?: string): Promise<SlmRuntime> {
+export async function createSlmRuntime(
+  baseUrl?: string,
+  getCustomApis?: () => CustomApiConfig[]
+): Promise<SlmRuntime> {
   const llama = new LlamaCppRuntime(baseUrl);
   if (await isReachable(baseUrl ?? process.env.LLAMA_SERVER_URL ?? "http://127.0.0.1:8080")) {
     return llama;
   }
-  return new RuleBasedFallbackRuntime();
+  return new RuleBasedFallbackRuntime(getCustomApis);
 }
 
 async function isReachable(baseUrl: string): Promise<boolean> {

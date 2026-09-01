@@ -32,4 +32,6 @@ export interface ApiConnector {
 export interface ApiClientOptions {
   timeoutMs?: number;
   retries?: number;
+  /** 커스텀 API의 헤더 기반 인증(header/bearer)에 쓰인다 */
+  headers?: Record<string, string>;
 }

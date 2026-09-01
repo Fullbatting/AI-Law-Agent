@@ -88,18 +88,39 @@ Query Planner/Tool Router 이하 코드는 어떤 런타임이 실제로 쓰이�
 | `core/conversation` | 대화/메시지/API 호출 이력 저장 및 삭제 | 11장 |
 | `core/export` | Excel/CSV 내보내기 | 9장, 13장 |
 | `connectors/hira`, `connectors/law` | 실제 공공 API 호출 및 정규화 | 4장, 7장, 8장 |
+| `connectors/generic/customApiConnector.ts` | 사용자가 설정 화면에서 등록한 임의의(범용) API용 Connector. 필드별 매핑 코드 없이 "검색어 하나 + 고정 파라미터"로 호출하고, 응답에서 배열처럼 보이는 부분을 찾아 표로 정규화하는 휴리스틱을 쓴다 | 4장, 6장 |
 | `connectors/common` | 공용 HTTP 클라이언트, XML/JSON 파서, 응답 검증 | 4장 |
 | `data/dictionaries` | 지역명·기관코드 등 자연어 ↔ API 코드 매핑 테이블 | 8장 |
 | `data/schemas` | Connector별 원본/정규화 데이터 Zod 스키마 | 25장 |
 
 ## 확장 방법
 
-새로운 기관 API(질병관리청, 통계청 등)를 추가하려면:
+새로운 기관 API(질병관리청, 통계청 등)를 **코드로 제대로** 추가하려면:
 
 1. `connectors/<기관>/` 아래에 `ApiConnector` 인터페이스를 구현하는 파일 추가
 2. `core/tools/registry.ts`의 `defaultConnectors()`에 등록
 3. 필요한 경우 `data/dictionaries`, `data/schemas`에 코드 매핑/스키마 추가
 4. `core/llm/prompt/fewShot.ts`에 few-shot 예시 추가
+
+코드를 건드리지 않고 **앱 화면에서 바로** API를 늘리려면 "API 키 설정"
+화면의 "커스텀 API 관리" 섹션을 쓴다(README "커스텀(범용) API 등록" 참고).
+`AppCore.refreshCustomApis()`가 `SettingsManager.getCustomApis()`를 다시 읽어
+`ToolRegistry`에 `custom:<id>` source로 등록/해제하므로, `ToolRegistry`·
+`ToolRouter`·`PermissionManager`는 source/entity를 그냥 문자열로만 다뤄
+코드 변경 없이 그대로 동작한다. 다만 `CustomApiConnector`는 필드별 매핑이
+없는 범용 Connector라 표현력이 떨어진다 — 실제 서비스에 오래 쓸 API라면
+결국 1~4번처럼 전용 Connector를 만드는 편이 낫다.
+
+### 자연어 질문을 어느 Connector로 보낼지 정하는 방법
+
+`QueryPlanner`(`core/planner/queryPlanner.ts`)가 `ToolRegistry.describeForPrompt()`
+로 만든 "허용된 데이터 소스" 목록을 시스템 프롬프트에 그대로 넣어 SLM에게
+넘긴다 — Connector를 추가해도 이 프롬프트 생성 코드는 그대로다. GGUF 모델이
+로드되어 있으면 모델이 이 목록을 보고 source/entity를 직접 고른다. 모델이
+없어 규칙 기반 폴백(`core/llm/inference/ruleBasedFallback.ts`)이 대신
+동작할 때는, 새로 만든 전용 Connector라면 그 폴백에 직접 규칙을 추가해야
+하지만, 커스텀 API로 등록한 경우엔 이름 언급/키워드 겹침 기반의 범용 라우팅
+규칙이 이미 자동으로 적용된다(README "자동 분류 vs 직접 지정" 참고).
 
 SLM/Planner/Tool Router/Data Processor 코드는 수정할 필요가 없다 — 이것이
 Query DSL + Tool Registry + Connector 구조를 초기부터 분리한 이유다.

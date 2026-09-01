@@ -2,7 +2,7 @@ import type { ConversationSummary, MessageRecord } from "../../../core/conversat
 import type { AskResult } from "../../../core/appCore";
 import type { NormalizedResult } from "../../../core/types/domain";
 import type { ModelStatus } from "../../../core/llm/modelManager";
-import type { AppSettings } from "../../../core/settings/settingsManager";
+import type { AppSettings, CustomApiConfig } from "../../../core/settings/settingsManager";
 
 export interface PublicDataAIBridge {
   createConversation(title?: string): Promise<ConversationSummary>;
@@ -26,6 +26,10 @@ export interface PublicDataAIBridge {
   // API 키 설정
   getSettings(): Promise<AppSettings>;
   updateSettings(patch: AppSettings): Promise<AppSettings>;
+
+  // 커스텀(범용) API 등록
+  addCustomApi(config: Omit<CustomApiConfig, "id">): Promise<CustomApiConfig>;
+  removeCustomApi(id: string): Promise<{ ok: boolean }>;
 }
 
 declare global {

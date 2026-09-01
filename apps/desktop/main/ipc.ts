@@ -18,4 +18,6 @@ export const IPC = {
   modelStatusChanged: "model:statusChanged",
   settingsGet: "settings:get",
   settingsUpdate: "settings:update",
+  customApiAdd: "settings:customApiAdd",
+  customApiRemove: "settings:customApiRemove",
 } as const;

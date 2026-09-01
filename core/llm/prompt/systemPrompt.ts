@@ -24,9 +24,9 @@ ${registry.describeForPrompt()}
   "intent": "string (예: hospital_search, law_search)",
   "queries": [
     {
-      "source": "hira | law",
+      "source": "위 목록에 나열된 source 값 중 하나 (예: hira, law, custom:<id>)",
       "operation": "search | get | filter | sort | group | aggregate | join | compare | export",
-      "entity": "hospital | law",
+      "entity": "위 목록에서 고른 source에 대응하는 entity 값",
       "filters": [{ "field": "string", "operator": "eq|ne|contains|gt|gte|lt|lte|in", "value": "string|number|boolean|array" }],
       "select": ["string"],
       "sort": { "field": "string", "order": "asc|desc" } | null,

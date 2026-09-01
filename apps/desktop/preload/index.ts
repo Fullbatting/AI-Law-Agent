@@ -33,6 +33,10 @@ const api = {
   // API 키 설정
   getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
   updateSettings: (patch: unknown) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
+
+  // 커스텀(범용) API 등록
+  addCustomApi: (config: unknown) => ipcRenderer.invoke(IPC.customApiAdd, config),
+  removeCustomApi: (id: string) => ipcRenderer.invoke(IPC.customApiRemove, id),
 };
 
 contextBridge.exposeInMainWorld("publicDataAI", api);

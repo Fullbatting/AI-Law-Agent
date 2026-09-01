@@ -1,5 +1,6 @@
 import type { SlmRuntime, SlmCompletionRequest, SlmSummarizeRequest } from "./types";
 import type { QueryDSL, QueryPlan } from "../../query/dsl/types";
+import type { CustomApiConfig } from "../../settings/settingsManager";
 import { REGION_NAME_TO_SIDO_CODE } from "../../../data/dictionaries/regionCodes";
 import { HOSPITAL_TYPE_NAME_TO_CODE } from "../../../data/dictionaries/hospitalTypeCodes";
 import { buildTemplateSummary } from "../prompt/summarizePrompt";
@@ -29,6 +30,14 @@ const FIELD_ALIASES: Record<string, string> = {
 export class RuleBasedFallbackRuntime implements SlmRuntime {
   readonly name = "rule-based-fallback";
 
+  /**
+   * @param getCustomApis 설정 화면에서 등록한 커스텀 API 목록을 조회하는 함수.
+   * GGUF 모델이 없을 때도(진짜 언어 이해 없이) 어느 API로 질문을 보낼지
+   * 자동으로 추정하기 위해 쓴다 — buildPlan() 참고. 등록된 게 없으면(기본값)
+   * 기존과 동일하게 HIRA/법제처 두 가지만 규칙으로 구분한다.
+   */
+  constructor(private readonly getCustomApis: () => CustomApiConfig[] = () => []) {}
+
   async complete(request: SlmCompletionRequest): Promise<string> {
     const plan = this.buildPlan(request.userText);
     return JSON.stringify(plan);
@@ -39,11 +48,47 @@ export class RuleBasedFallbackRuntime implements SlmRuntime {
     return buildTemplateSummary(request.results);
   }
 
+  /**
+   * 어느 API로 보낼지 자동으로 정한다(질문 1 "1이 가능하면 1"에 대한 규칙
+   * 기반 폴백 쪽 구현):
+   * 1) 질문에 등록된 커스텀 API 이름이 그대로 들어있으면 그 API로 확정한다
+   *    — 사용자가 "OO API로 찾아줘"처럼 직접 지정한 것과 동일한 효과라
+   *    자동 분류와 수동 지정을 자연스럽게 합친다.
+   * 2) 법령 관련 키워드가 있으면 법제처로 보낸다.
+   * 3) 그 외엔 등록된 커스텀 API들의 이름+설명과 질문의 단어 겹침 점수가
+   *    가장 높은 것을 고른다(뚜렷하게 겹치는 게 있을 때만 — 애매하면
+   *    잘못 추측하는 대신 3순위로 밀어둔다).
+   * 4) 그래도 없으면 기본값인 병원 검색으로 처리한다.
+   * 실제 GGUF 모델이 로드되어 있으면 이 규칙 대신 모델이 시스템 프롬프트에
+   * 나열된 모든 소스(커스텀 API 포함, core/tools/registry.ts describeForPrompt
+   * 참고)를 보고 직접 판단하므로 훨씬 정확하다.
+   */
   private buildPlan(userText: string): QueryPlan {
+    const customApis = this.getCustomApis();
+
+    const byName = customApis.find((api) => api.name.trim() && userText.includes(api.name.trim()));
+    if (byName) return this.buildCustomPlan(byName, userText);
+
     if (/법령|법률|위반|조문|법제처/.test(userText)) {
       return this.buildLawPlan(userText);
     }
+
+    const byKeyword = bestMatchingCustomApi(userText, customApis);
+    if (byKeyword) return this.buildCustomPlan(byKeyword, userText);
+
     return this.buildHospitalPlan(userText);
+  }
+
+  private buildCustomPlan(api: CustomApiConfig, userText: string): QueryPlan {
+    const keyword = extractGenericKeyword(userText, api.name);
+    const dsl: QueryDSL = {
+      source: `custom:${api.id}`,
+      operation: "search",
+      entity: "item",
+      filters: keyword ? [{ field: "query", operator: "eq", value: keyword }] : [],
+      limit: 50,
+    };
+    return { intent: `custom_${api.id}_search`, queries: [dsl] };
   }
 
   private buildHospitalPlan(userText: string): QueryPlan {
@@ -130,4 +175,42 @@ function extractLawKeyword(userText: string): string | null {
     .trim();
   const words = cleaned.split(/\s+/).filter(Boolean);
   return words.length > 0 ? words.slice(0, 3).join(" ") : null;
+}
+
+/** 질문 문장을 대략적인 "단어" 단위로 쪼갠다(공백/구두점 기준, 2글자 미만은 잡음으로 버린다). */
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 2);
+}
+
+/**
+ * 등록된 커스텀 API 중 질문과 이름+설명의 단어가 가장 많이 겹치는 것을 고른다.
+ * 겹치는 단어가 최소 2개 이상일 때만 채택한다 — 1개만 우연히 겹쳐도 채택하면
+ * 상관없는 질문을 엉뚱한 API로 잘못 보낼 위험이 커지기 때문이다.
+ */
+function bestMatchingCustomApi(userText: string, customApis: CustomApiConfig[]): CustomApiConfig | null {
+  if (customApis.length === 0) return null;
+  const questionTokens = new Set(tokenize(userText));
+  if (questionTokens.size === 0) return null;
+
+  let best: { api: CustomApiConfig; score: number } | null = null;
+  for (const api of customApis) {
+    const corpus = `${api.name} ${api.description ?? ""}`;
+    const score = tokenize(corpus).filter((token) => questionTokens.has(token)).length;
+    if (score > 0 && (!best || score > best.score)) best = { api, score };
+  }
+  return best && best.score >= 2 ? best.api : null;
+}
+
+/** 커스텀 API용 검색어 추출: 흔한 요청 어미와 API 이름 자체를 지우고 남은 단어들을 쓴다. */
+function extractGenericKeyword(userText: string, apiName: string): string | null {
+  const withoutName = apiName.trim() ? userText.split(apiName.trim()).join(" ") : userText;
+  const cleaned = withoutName
+    .replace(/(찾아줘|알려줘|검색해줘|보여줘|해줘|API|api|관련된?|에\s*대해|에\s*대한)/g, " ")
+    .trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  return words.length > 0 ? words.slice(0, 5).join(" ") : null;
 }

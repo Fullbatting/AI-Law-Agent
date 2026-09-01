@@ -10,7 +10,7 @@ import path from "node:path";
 import { openDatabase } from "../../../core/db/schema";
 import { createSlmRuntime } from "../../../core/llm/inference";
 import { ModelManager } from "../../../core/llm/modelManager";
-import { SettingsManager, type AppSettings } from "../../../core/settings/settingsManager";
+import { SettingsManager, type AppSettings, type CustomApiConfig } from "../../../core/settings/settingsManager";
 import { AppCore } from "../../../core/appCore";
 import { writeExcelFile } from "../../../core/export/excelExporter";
 import { writeCsvFile } from "../../../core/export/csvExporter";
@@ -53,11 +53,14 @@ function getAppSettingsPath(): string {
 
 async function initAppCore(): Promise<AppCore> {
   const db = await openDatabase(getDbPath());
+  const settingsManager = new SettingsManager(getAppSettingsPath());
   // 사용자가 GGUF 모델을 업로드하지 않았거나 로드에 실패했을 때 쓸 폴백
   // (llama.cpp 서버가 떠 있으면 그것을, 아니면 규칙 기반 폴백을 자동 선택한다).
-  const fallbackRuntime = await createSlmRuntime();
+  // 규칙 기반 폴백에도 등록된 커스텀 API 목록을 넘겨, GGUF 모델 없이도
+  // 어느 정도는 자동으로 커스텀 API를 골라 쓸 수 있게 한다
+  // (core/llm/inference/ruleBasedFallback.ts 참고).
+  const fallbackRuntime = await createSlmRuntime(undefined, () => settingsManager.getCustomApis());
   const modelManager = new ModelManager(getModelSettingsPath());
-  const settingsManager = new SettingsManager(getAppSettingsPath());
   const core = new AppCore(db, modelManager, fallbackRuntime, settingsManager);
 
   modelManager.onStatusChange((status) => {
@@ -184,6 +187,21 @@ function registerIpcHandlers(core: AppCore): void {
 
   ipcMain.handle(IPC.settingsUpdate, (_event, patch: AppSettings) => {
     return core.settingsManager.update(patch);
+  });
+
+  // 커스텀(범용) API 등록 — 추가/삭제 직후 registry에 바로 반영해
+  // 앱을 재시작하지 않아도 다음 질문부터 사용할 수 있게 한다
+  // (core/appCore.ts의 refreshCustomApis 참고).
+  ipcMain.handle(IPC.customApiAdd, (_event, config: Omit<CustomApiConfig, "id">) => {
+    const added = core.settingsManager.addCustomApi(config);
+    core.refreshCustomApis();
+    return added;
+  });
+
+  ipcMain.handle(IPC.customApiRemove, (_event, id: string) => {
+    core.settingsManager.removeCustomApi(id);
+    core.refreshCustomApis();
+    return { ok: true };
   });
 }
 

@@ -318,6 +318,137 @@ body {
   margin: 0;
 }
 
+/* 커스텀(범용) API 관리 섹션 */
+.custom-api-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.custom-api-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.custom-api-header button {
+  padding: 6px 10px;
+  border: 1px solid var(--accent);
+  background: var(--panel);
+  color: var(--accent);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.custom-api-header button:hover {
+  background: var(--bg);
+}
+
+.custom-api-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.custom-api-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.custom-api-list-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.custom-api-list-info strong {
+  font-size: 13px;
+}
+
+.custom-api-list-url,
+.custom-api-list-desc {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.custom-api-list li button {
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #dc2626;
+  white-space: nowrap;
+}
+
+.custom-api-list li button:hover:not(:disabled) {
+  background: var(--bg);
+}
+
+.custom-api-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--bg);
+}
+
+.custom-api-form select {
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--panel);
+  color: var(--text);
+}
+
+.custom-api-form > button {
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-api-form > button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.custom-api-form > button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.custom-api-error {
+  font-size: 12px;
+  color: #dc2626;
+}
+
 .settings-modal-footer {
   display: flex;
   align-items: center;

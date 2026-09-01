@@ -21,6 +21,19 @@ export class ToolRegistry {
     this.connectorsBySource.set(key(connector.source, connector.entity), connector);
   }
 
+  /**
+   * source가 주어진 접두사로 시작하는 Connector를 모두 제거한다.
+   * 사용자가 설정 화면에서 커스텀 API를 추가/삭제할 때마다 "custom:" 접두사가
+   * 붙은 항목을 전부 지우고 최신 목록으로 다시 등록하는 용도다
+   * (AppCore.refreshCustomApis 참고) — 앱을 재시작하지 않아도 다음
+   * 질문부터 바로 반영된다.
+   */
+  removeBySourcePrefix(prefix: string): void {
+    for (const k of [...this.connectorsBySource.keys()]) {
+      if (k.startsWith(prefix)) this.connectorsBySource.delete(k);
+    }
+  }
+
   get(source: string, entity: string): ApiConnector | undefined {
     return this.connectorsBySource.get(key(source, entity));
   }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import type { AppSettings } from "../../../../core/settings/settingsManager";
 import { detectApiKeyKind, extractOcFromValue } from "../../../../core/settings/detectApiKeyKind";
+import { CustomApiManager } from "./CustomApiManager";
 
 interface Props {
   onClose: () => void;
@@ -163,6 +164,10 @@ export function SettingsModal({ onClose }: Props): JSX.Element {
             않습니다. HIRA 키는 "일반 인증키(Decoding)"와 "(Encoding)" 어느 쪽을
             붙여넣어도 자동으로 올바르게 처리됩니다.
           </p>
+
+          <hr className="settings-divider" />
+
+          <CustomApiManager />
         </div>
 
         <div className="settings-modal-footer">
