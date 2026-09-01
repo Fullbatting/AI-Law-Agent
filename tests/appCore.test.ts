@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { AppCore } from "../core/appCore";
 import { ModelManager } from "../core/llm/modelManager";
+import { SettingsManager } from "../core/settings/settingsManager";
 import { RuleBasedFallbackRuntime } from "../core/llm/inference/ruleBasedFallback";
 import { openInMemoryDatabase } from "../core/db/schema";
 import type { SlmSummarizeRequest } from "../core/llm/inference/types";
@@ -41,10 +42,13 @@ class SmartSummarizeRuntime extends RuleBasedFallbackRuntime {
 }
 
 let settingsPath: string;
+let appSettingsPath: string;
 
 beforeEach(() => {
   process.env.HIRA_SERVICE_KEY = "TEST_KEY";
-  settingsPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "appcore-test-")), "model-settings.json");
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "appcore-test-"));
+  settingsPath = path.join(tmpDir, "model-settings.json");
+  appSettingsPath = path.join(tmpDir, "app-settings.json");
   vi.stubGlobal(
     "fetch",
     vi.fn().mockResolvedValue({
@@ -61,7 +65,7 @@ afterEach(() => {
 
 describe("AppCore.ask", () => {
   it("규칙 기반 폴백은 고정 템플릿으로 결과를 요약한다", async () => {
-    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new RuleBasedFallbackRuntime());
+    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new RuleBasedFallbackRuntime(), new SettingsManager(appSettingsPath));
     const conversation = core.conversations.createConversation();
 
     const result = await core.ask(conversation.id, "서울 종합병원 목록을 보여줘");
@@ -72,7 +76,7 @@ describe("AppCore.ask", () => {
   });
 
   it("SLM의 summarize() 출력이 실제 사용자 메시지로 쓰인다", async () => {
-    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new SmartSummarizeRuntime());
+    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new SmartSummarizeRuntime(), new SettingsManager(appSettingsPath));
     const conversation = core.conversations.createConversation();
 
     const result = await core.ask(conversation.id, "서울 종합병원 목록을 보여줘");
@@ -82,7 +86,7 @@ describe("AppCore.ask", () => {
   });
 
   it("summarize()가 실패해도 템플릿 요약으로 안전하게 대체되고 요청은 실패 처리되지 않는다", async () => {
-    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new ThrowingSummarizeRuntime());
+    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new ThrowingSummarizeRuntime(), new SettingsManager(appSettingsPath));
     const conversation = core.conversations.createConversation();
 
     const result = await core.ask(conversation.id, "서울 종합병원 목록을 보여줘");
@@ -92,7 +96,7 @@ describe("AppCore.ask", () => {
   });
 
   it("어떤 요약이든 원본 결과(results)는 그대로 함께 반환된다", async () => {
-    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new SmartSummarizeRuntime());
+    const core = new AppCore(await openInMemoryDatabase(), new ModelManager(settingsPath), new SmartSummarizeRuntime(), new SettingsManager(appSettingsPath));
     const conversation = core.conversations.createConversation();
 
     const result = await core.ask(conversation.id, "서울 종합병원 목록을 보여줘");

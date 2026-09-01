@@ -2,6 +2,7 @@ import type { ConversationSummary, MessageRecord } from "../../../core/conversat
 import type { AskResult } from "../../../core/appCore";
 import type { NormalizedResult } from "../../../core/types/domain";
 import type { ModelStatus } from "../../../core/llm/modelManager";
+import type { AppSettings } from "../../../core/settings/settingsManager";
 
 export interface PublicDataAIBridge {
   createConversation(title?: string): Promise<ConversationSummary>;
@@ -21,6 +22,10 @@ export interface PublicDataAIBridge {
   loadModelFile(filePath: string): Promise<ModelStatus>;
   unloadModel(): Promise<ModelStatus>;
   onModelStatusChanged(callback: (status: ModelStatus) => void): () => void;
+
+  // API 키 설정
+  getSettings(): Promise<AppSettings>;
+  updateSettings(patch: AppSettings): Promise<AppSettings>;
 }
 
 declare global {

@@ -10,6 +10,7 @@ import path from "node:path";
 import { openDatabase } from "../../../core/db/schema";
 import { createSlmRuntime } from "../../../core/llm/inference";
 import { ModelManager } from "../../../core/llm/modelManager";
+import { SettingsManager, type AppSettings } from "../../../core/settings/settingsManager";
 import { AppCore } from "../../../core/appCore";
 import { writeExcelFile } from "../../../core/export/excelExporter";
 import { writeCsvFile } from "../../../core/export/csvExporter";
@@ -46,13 +47,18 @@ function getModelSettingsPath(): string {
   return path.join(app.getPath("userData"), "model-settings.json");
 }
 
+function getAppSettingsPath(): string {
+  return path.join(app.getPath("userData"), "app-settings.json");
+}
+
 async function initAppCore(): Promise<AppCore> {
   const db = await openDatabase(getDbPath());
   // 사용자가 GGUF 모델을 업로드하지 않았거나 로드에 실패했을 때 쓸 폴백
   // (llama.cpp 서버가 떠 있으면 그것을, 아니면 규칙 기반 폴백을 자동 선택한다).
   const fallbackRuntime = await createSlmRuntime();
   const modelManager = new ModelManager(getModelSettingsPath());
-  const core = new AppCore(db, modelManager, fallbackRuntime);
+  const settingsManager = new SettingsManager(getAppSettingsPath());
+  const core = new AppCore(db, modelManager, fallbackRuntime, settingsManager);
 
   modelManager.onStatusChange((status) => {
     mainWindow?.webContents.send(IPC.modelStatusChanged, status);
@@ -170,6 +176,14 @@ function registerIpcHandlers(core: AppCore): void {
 
   ipcMain.handle(IPC.modelUnload, async () => {
     return core.modelManager.unloadModel();
+  });
+
+  ipcMain.handle(IPC.settingsGet, () => {
+    return core.settingsManager.get();
+  });
+
+  ipcMain.handle(IPC.settingsUpdate, (_event, patch: AppSettings) => {
+    return core.settingsManager.update(patch);
   });
 }
 

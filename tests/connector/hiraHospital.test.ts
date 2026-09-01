@@ -52,7 +52,7 @@ describe("HiraHospitalConnector", () => {
   });
 
   it("serviceKey가 없으면 request가 에러를 던진다", async () => {
-    const connector = new HiraHospitalConnector(undefined, "");
+    const connector = new HiraHospitalConnector(undefined, () => "");
     await expect(connector.request({ filters: {} })).rejects.toThrow(/HIRA_SERVICE_KEY/);
   });
 
@@ -64,7 +64,7 @@ describe("HiraHospitalConnector", () => {
         text: async () => JSON.stringify(SAMPLE_RESPONSE),
       })
     );
-    const connector = new HiraHospitalConnector(undefined, "TEST_KEY");
+    const connector = new HiraHospitalConnector(undefined, () => "TEST_KEY");
     const raw = await connector.request(connector.buildParams(dsl));
     const normalized = connector.normalize(raw);
 
@@ -114,7 +114,7 @@ describe("HiraHospitalConnector", () => {
           `<OpenAPI_ServiceResponse><cmmMsgHeader><errMsg>SERVICE KEY IS NOT REGISTERED</errMsg></cmmMsgHeader></OpenAPI_ServiceResponse>`,
       })
     );
-    const connector = new HiraHospitalConnector(undefined, "BAD_KEY");
+    const connector = new HiraHospitalConnector(undefined, () => "BAD_KEY");
     await expect(connector.request(connector.buildParams(dsl))).rejects.toThrow(/HIRA API 오류/);
   });
 });

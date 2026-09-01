@@ -33,7 +33,7 @@ describe("LawSearchConnector", () => {
   };
 
   it("OC가 없으면 request가 에러를 던진다", async () => {
-    const connector = new LawSearchConnector(undefined, "");
+    const connector = new LawSearchConnector(undefined, () => "");
     await expect(connector.request({ filters: {} })).rejects.toThrow(/LAW_API_OC/);
   });
 
@@ -45,7 +45,7 @@ describe("LawSearchConnector", () => {
         text: async () => JSON.stringify(SAMPLE_RESPONSE),
       })
     );
-    const connector = new LawSearchConnector(undefined, "test@example.com");
+    const connector = new LawSearchConnector(undefined, () => "test@example.com");
     const raw = await connector.request(connector.buildParams(dsl));
     const normalized = connector.normalize(raw);
 

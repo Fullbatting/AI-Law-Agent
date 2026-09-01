@@ -77,6 +77,7 @@ Query Planner/Tool Router 이하 코드는 어떤 런타임이 실제로 쓰이�
 | `apps/desktop/renderer` | React 기반 채팅/결과 UI | 13장 |
 | `core/llm` | 시스템 프롬프트, few-shot, Query DSL Zod 스키마, SLM 런타임(GGUF/llama.cpp 서버/규칙 기반 폴백) | 5장, 17장 |
 | `core/llm/modelManager.ts` | 사용자가 업로드한 GGUF 모델의 로드/해제/상태 관리, node-llama-cpp로 프로세스 내 추론 | 17장 |
+| `core/settings/settingsManager.ts` | 앱 내 "API 키 설정" 화면에서 입력한 `HIRA_SERVICE_KEY`/`LAW_API_OC`를 `userData/app-settings.json`에 저장·조회 (없으면 `.env`로 폴백). Connector가 요청마다 다시 읽어 재시작 없이 즉시 반영 | 15장 |
 | `core/planner` | 자연어 → QueryPlan 변환 + 검증 실패 시 재생성 요청 | 5장, 25장 |
 | `core/tools` | Tool Registry(허용된 Connector 목록), Tool Router(실행) | 6장 |
 | `core/permission` | 등록되지 않은 source/entity, 과도한 limit 차단 | 25장 |

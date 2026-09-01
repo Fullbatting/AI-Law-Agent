@@ -27,7 +27,12 @@ export class HiraHospitalConnector implements ApiConnector {
 
   constructor(
     private readonly apiClient: ApiClient = new ApiClient(),
-    private readonly serviceKey: string = process.env.HIRA_SERVICE_KEY ?? ""
+    /**
+     * 함수로 받는 이유: 사용자가 설정 화면에서 키를 나중에 입력/변경해도
+     * (SettingsManager.getHiraServiceKey) 앱 재시작 없이 다음 호출부터
+     * 바로 반영되도록 하기 위함이다. 생성 시점에 문자열로 고정하면 안 된다.
+     */
+    private readonly getServiceKey: () => string = () => process.env.HIRA_SERVICE_KEY ?? ""
   ) {}
 
   buildParams(dsl: QueryDSL): ConnectorRequestParams {
@@ -53,13 +58,14 @@ export class HiraHospitalConnector implements ApiConnector {
   }
 
   async request(params: ConnectorRequestParams): Promise<unknown> {
-    if (!this.serviceKey) {
+    const serviceKey = this.getServiceKey();
+    if (!serviceKey) {
       throw new Error(
-        "HIRA_SERVICE_KEY가 설정되지 않았습니다. .env 파일에 공공데이터포털 서비스키를 등록하세요."
+        "HIRA_SERVICE_KEY가 설정되지 않았습니다. 앱의 설정 화면(또는 .env 파일)에 공공데이터포털 서비스키를 등록하세요."
       );
     }
     const url = new URL(ENDPOINT);
-    url.searchParams.set("serviceKey", this.serviceKey);
+    url.searchParams.set("serviceKey", serviceKey);
     url.searchParams.set("_type", "json");
     url.searchParams.set("numOfRows", String(params.numOfRows ?? 100));
     url.searchParams.set("pageNo", String(params.page ?? 1));

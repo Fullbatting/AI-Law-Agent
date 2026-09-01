@@ -1,6 +1,7 @@
 import React from "react";
 import type { ConversationSummary } from "../../../../core/conversation/conversationManager";
 import { ModelPanel } from "./ModelPanel";
+import { SettingsPanel } from "./SettingsPanel";
 
 interface Props {
   conversations: ConversationSummary[];
@@ -51,6 +52,7 @@ export function ConversationSidebar({
           API 캐시 삭제
         </button>
       </div>
+      <SettingsPanel />
       <ModelPanel />
     </aside>
   );

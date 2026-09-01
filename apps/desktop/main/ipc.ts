@@ -16,4 +16,6 @@ export const IPC = {
   modelStatus: "model:status",
   /** main → renderer 전용 이벤트 (모델 로딩 진행률 등 상태 변화 push) */
   modelStatusChanged: "model:statusChanged",
+  settingsGet: "settings:get",
+  settingsUpdate: "settings:update",
 } as const;

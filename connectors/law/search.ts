@@ -23,8 +23,10 @@ export class LawSearchConnector implements ApiConnector {
 
   constructor(
     private readonly apiClient: ApiClient = new ApiClient(),
-    // 법제처 오픈API는 서비스키 대신 신청 시 등록한 이메일 ID(OC)를 사용한다
-    private readonly oc: string = process.env.LAW_API_OC ?? ""
+    // 법제처 오픈API는 서비스키 대신 신청 시 등록한 이메일 ID(OC)를 사용한다.
+    // 함수로 받는 이유는 hospital.ts의 getServiceKey 주석 참고 —
+    // 설정 화면에서 값이 바뀌어도 재시작 없이 다음 호출부터 반영된다.
+    private readonly getOc: () => string = () => process.env.LAW_API_OC ?? ""
   ) {}
 
   buildParams(dsl: QueryDSL): ConnectorRequestParams {
@@ -41,13 +43,14 @@ export class LawSearchConnector implements ApiConnector {
   }
 
   async request(params: ConnectorRequestParams): Promise<unknown> {
-    if (!this.oc) {
+    const oc = this.getOc();
+    if (!oc) {
       throw new Error(
-        "LAW_API_OC가 설정되지 않았습니다. .env 파일에 법제처 OpenAPI 이용자 ID를 등록하세요."
+        "LAW_API_OC가 설정되지 않았습니다. 앱의 설정 화면(또는 .env 파일)에 법제처 OpenAPI 이용자 ID를 등록하세요."
       );
     }
     const url = new URL(ENDPOINT);
-    url.searchParams.set("OC", this.oc);
+    url.searchParams.set("OC", oc);
     url.searchParams.set("target", "law");
     url.searchParams.set("type", "JSON");
     url.searchParams.set("display", String(params.numOfRows ?? 20));

@@ -29,6 +29,10 @@ const api = {
     ipcRenderer.on(IPC.modelStatusChanged, handler);
     return () => ipcRenderer.removeListener(IPC.modelStatusChanged, handler);
   },
+
+  // API 키 설정
+  getSettings: () => ipcRenderer.invoke(IPC.settingsGet),
+  updateSettings: (patch: unknown) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
 };
 
 contextBridge.exposeInMainWorld("publicDataAI", api);

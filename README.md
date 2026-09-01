@@ -77,10 +77,15 @@ GGUF 모델을 **Electron 프로세스 안에서 직접** 구동한다. 별도�
    - `npm install`로 의존성을 설치한다.
    - `.env.example`을 복사해 `.env`를 만든다.
    - 앱을 빌드한다 (`dist/` 생성).
-4. 폴더에 생성된 **`.env` 파일을 메모장으로 열어** `HIRA_SERVICE_KEY`,
-   `LAW_API_OC` 값을 채워 넣는다 (공공데이터포털/법제처에서 미리 발급받아야 함).
-5. **`run.bat`을 더블클릭**하면 Electron 창이 뜨며 프로그램이 시작된다.
+4. **`run.bat`을 더블클릭**하면 Electron 창이 뜨며 프로그램이 시작된다.
    이후에는 `install.bat`을 다시 실행할 필요 없이 `run.bat`만 실행하면 된다.
+5. 앱이 뜨면 사이드바의 **"API 키 설정"**을 펼쳐 공공데이터포털에서 발급받은
+   `HIRA_SERVICE_KEY`, `LAW_API_OC`(법제처 인증키) 값을 입력하고 **저장**을
+   누른다. `.env` 파일을 메모장으로 직접 열 필요 없이 화면에서 바로 등록할 수
+   있고, 앱을 재시작하지 않아도 다음 질문부터 바로 반영된다. 값은 사용자
+   PC의 `userData\app-settings.json`에만 저장되며 외부로 전송되지 않는다.
+   (`.env`에 값을 넣어두면 설정 화면에서 아무것도 입력하지 않았을 때 기본값
+   으로 계속 쓰인다 — 두 방식을 함께 쓸 필요는 없다.)
 
 `install.bat`/`run.bat`은 더블클릭 시 자기 자신을 새 콘솔 창으로 다시 실행하고,
 성공/실패 어느 경로든 마지막에 "아무 키나 누르면 닫힙니다"로 멈춘다 — 그래서
@@ -151,12 +156,20 @@ npm run package:linux   # Linux AppImage
 결과물은 `release/` 폴더에 생성된다. Windows에서는 `scripts\build-installer.bat`
 더블클릭으로 동일한 작업(`npm run package:win`)을 수행할 수 있다.
 
+## API 키 설정 (앱 내 화면)
+
+사이드바의 **"API 키 설정"** 패널에서 `HIRA_SERVICE_KEY`, `LAW_API_OC`를 입력하고
+저장하면 `userData/app-settings.json`에 저장되고, Connector들이 요청마다 이
+값을 다시 읽으므로 앱을 재시작하지 않아도 바로 적용된다
+(`core/settings/settingsManager.ts`, `core/tools/registry.ts` 참고).
+설정 화면에 값을 넣지 않았다면 아래 환경 변수(`.env`)를 대신 사용한다.
+
 ## 환경 변수 (`.env`)
 
 | 변수 | 설명 |
 |---|---|
-| `HIRA_SERVICE_KEY` | 공공데이터포털 HIRA 병원정보서비스 서비스키 |
-| `LAW_API_OC` | 법제처 국가법령정보 오픈API 이용자 이메일 ID |
+| `HIRA_SERVICE_KEY` | 공공데이터포털 HIRA 병원정보서비스 서비스키 (설정 화면에 값이 없을 때의 기본값) |
+| `LAW_API_OC` | 법제처 국가법령정보 오픈API 이용자 이메일 ID (설정 화면에 값이 없을 때의 기본값) |
 | `LLAMA_SERVER_URL` | llama.cpp `llama-server` 엔드포인트 (기본 `http://127.0.0.1:8080`) |
 | `APP_DB_PATH` | 대화/캐시 SQLite 파일 경로 (Electron 실행 시 기본값은 `userData` 아래) |
 

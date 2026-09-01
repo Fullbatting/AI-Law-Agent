@@ -1,5 +1,5 @@
 import type { AppDatabase } from "./db/schema";
-import { ToolRegistry } from "./tools/registry";
+import { ToolRegistry, defaultConnectors } from "./tools/registry";
 import { ToolRouter } from "./tools/router";
 import { PermissionManager } from "./permission/permissionManager";
 import { QueryPlanner } from "./planner/queryPlanner";
@@ -7,6 +7,7 @@ import { CacheManager } from "./cache/cacheManager";
 import { ConversationManager } from "./conversation/conversationManager";
 import type { SlmRuntime } from "./llm/inference/types";
 import type { ModelManager } from "./llm/modelManager";
+import { SettingsManager } from "./settings/settingsManager";
 import type { NormalizedResult } from "./types/domain";
 import type { QueryDSL } from "./query/dsl/types";
 import { buildTemplateSummary } from "./llm/prompt/summarizePrompt";
@@ -33,15 +34,25 @@ export class AppCore {
   readonly cache: CacheManager;
   readonly conversations: ConversationManager;
   readonly modelManager: ModelManager;
+  readonly settingsManager: SettingsManager;
   private readonly slmProvider: () => SlmRuntime;
 
   /**
    * @param fallbackRuntime 사용자가 GGUF 모델을 업로드하지 않았을 때(또는 로드에
    * 실패했을 때) 사용할 런타임. llama.cpp 서버가 떠 있으면 그것을, 아니면
    * 규칙 기반 폴백을 넘긴다 (core/llm/inference/index.ts의 createSlmRuntime 참고).
+   * @param settingsManager 설정 화면에서 입력한 HIRA/법제처 API 키를 저장·조회한다.
+   * Connector들은 이 값을 매 호출 시점에 다시 읽으므로, 사용자가 설정을
+   * 바꾸면 앱을 재시작하지 않아도 다음 질의부터 바로 반영된다.
    */
-  constructor(db: AppDatabase, modelManager: ModelManager, fallbackRuntime: SlmRuntime) {
-    this.registry = new ToolRegistry();
+  constructor(
+    db: AppDatabase,
+    modelManager: ModelManager,
+    fallbackRuntime: SlmRuntime,
+    settingsManager: SettingsManager
+  ) {
+    this.settingsManager = settingsManager;
+    this.registry = new ToolRegistry(defaultConnectors(settingsManager));
     const permissions = new PermissionManager(this.registry);
     this.router = new ToolRouter(this.registry, permissions);
     this.modelManager = modelManager;

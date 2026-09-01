@@ -1,6 +1,7 @@
 import type { ApiConnector } from "../../connectors/common/types";
 import { HiraHospitalConnector } from "../../connectors/hira";
 import { LawSearchConnector } from "../../connectors/law";
+import type { SettingsManager } from "../settings/settingsManager";
 
 /**
  * Tool Registry — SLM이 선택할 수 있는 "허용된 Tool" 목록.
@@ -47,6 +48,17 @@ function key(source: string, entity: string): string {
   return `${source}:${entity}`;
 }
 
-function defaultConnectors(): ApiConnector[] {
-  return [new HiraHospitalConnector(), new LawSearchConnector()];
+/**
+ * settingsManager를 넘기면 사용자가 설정 화면에서 입력한 키를 우선 쓰고,
+ * 없으면 .env/환경변수로 폴백한다. 넘기지 않으면(테스트 등) 지금까지처럼
+ * 환경변수만 본다.
+ */
+export function defaultConnectors(settingsManager?: SettingsManager): ApiConnector[] {
+  return [
+    new HiraHospitalConnector(
+      undefined,
+      settingsManager ? () => settingsManager.getHiraServiceKey() : undefined
+    ),
+    new LawSearchConnector(undefined, settingsManager ? () => settingsManager.getLawApiOc() : undefined),
+  ];
 }
