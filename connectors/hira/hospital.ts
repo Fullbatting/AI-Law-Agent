@@ -1,7 +1,8 @@
 import type { ApiConnector } from "../common/types";
 import type { NormalizedResult, ConnectorRequestParams } from "../../core/types/domain";
 import type { QueryDSL } from "../../core/query/dsl/types";
-import { ApiClient } from "../common/apiClient";
+import { ApiClient, ApiRequestError } from "../common/apiClient";
+import { normalizeServiceKey } from "../common/serviceKey";
 import { parseApiResponse, isPublicDataApiError } from "../common/parser";
 import { validateWithSchema } from "../common/validator";
 import { hiraHospitalItemSchema, type HiraHospitalItem } from "../../data/schemas/hospital.schema";
@@ -65,7 +66,7 @@ export class HiraHospitalConnector implements ApiConnector {
       );
     }
     const url = new URL(ENDPOINT);
-    url.searchParams.set("serviceKey", serviceKey);
+    url.searchParams.set("serviceKey", normalizeServiceKey(serviceKey));
     url.searchParams.set("_type", "json");
     url.searchParams.set("numOfRows", String(params.numOfRows ?? 100));
     url.searchParams.set("pageNo", String(params.page ?? 1));
@@ -73,7 +74,20 @@ export class HiraHospitalConnector implements ApiConnector {
       if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
     }
 
-    const rawText = await this.apiClient.get(url.toString());
+    let rawText: string;
+    try {
+      rawText = await this.apiClient.get(url.toString());
+    } catch (err) {
+      if (err instanceof ApiRequestError && err.status === 403) {
+        throw new Error(
+          "HIRA API가 서비스키를 거부했습니다(HTTP 403). 공공데이터포털에서 " +
+            "'일반 인증키(Encoding)'가 아닌 '일반 인증키(Decoding)' 값을 " +
+            "설정 화면에 입력했는지 확인하세요. 방금 활용신청을 했다면 " +
+            "승인까지 몇 분~몇 시간이 걸릴 수 있으니 잠시 후 다시 시도하세요."
+        );
+      }
+      throw err;
+    }
     const parsed = parseApiResponse(rawText);
     const { isError, message } = isPublicDataApiError(parsed);
     if (isError) {

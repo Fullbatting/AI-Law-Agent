@@ -117,4 +117,31 @@ describe("HiraHospitalConnector", () => {
     const connector = new HiraHospitalConnector(undefined, () => "BAD_KEY");
     await expect(connector.request(connector.buildParams(dsl))).rejects.toThrow(/HIRA API 오류/);
   });
+
+  it("HTTP 403이면 인증키 인코딩 문제를 안내하는 메시지를 던진다", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        statusText: "Forbidden",
+        text: async () => "",
+      })
+    );
+    const connector = new HiraHospitalConnector(undefined, () => "TEST_KEY");
+    await expect(connector.request(connector.buildParams(dsl))).rejects.toThrow(/Decoding/);
+  });
+
+  it("이미 URL 인코딩된 서비스키를 붙여넣어도 이중 인코딩되지 않는다", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify(SAMPLE_RESPONSE),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const connector = new HiraHospitalConnector(undefined, () => "abcDEF123%2Bxyz%3D%3D");
+    await connector.request(connector.buildParams(dsl));
+
+    const calledUrl = new URL(fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl.searchParams.get("serviceKey")).toBe("abcDEF123+xyz==");
+  });
 });
