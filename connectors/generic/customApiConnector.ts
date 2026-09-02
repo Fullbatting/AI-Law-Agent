@@ -14,12 +14,16 @@ import { normalizeServiceKey } from "../common/serviceKey";
  * 응답 정규화도 "그 안에서 그럴듯한 배열을 찾아 평평하게 펴는" 휴리스틱이라
  * HIRA/법제처 Connector만큼 깔끔한 컬럼명이 나오진 않는다.
  */
+/** buildParams가 검색어를 담아두는 내부 전용 키. URL 쿼리에는 절대 실리지 않고, request()가 POST 본문 템플릿 치환에만 쓴다. */
+const INTERNAL_SEARCH_TERM_KEY = "__searchTerm";
+
 export class CustomApiConnector implements ApiConnector {
   readonly name: string;
   readonly description: string;
   readonly source: string;
   readonly entity = "item";
   readonly sourceLabel: string;
+  readonly exampleQuestions: string[];
 
   constructor(
     private readonly config: CustomApiConfig,
@@ -29,6 +33,7 @@ export class CustomApiConnector implements ApiConnector {
     this.description = config.description?.trim() || `${config.name} API 조회`;
     this.source = `custom:${config.id}`;
     this.sourceLabel = config.name;
+    this.exampleQuestions = config.exampleQuestions ?? [];
   }
 
   buildParams(dsl: QueryDSL): ConnectorRequestParams {
@@ -36,8 +41,12 @@ export class CustomApiConnector implements ApiConnector {
     const queryFilter = dsl.filters?.find(
       (f) => (f.field === "query" || f.field === "keyword") && f.value !== undefined && f.value !== ""
     );
-    if (queryFilter && this.config.searchParamName) {
-      filters[this.config.searchParamName] = String(queryFilter.value);
+    if (queryFilter) {
+      const term = String(queryFilter.value);
+      if (this.config.searchParamName) filters[this.config.searchParamName] = term;
+      // 검색 파라미터 이름을 지정하지 않았어도(예: POST 본문에서만 쓰는 경우)
+      // request()가 본문 템플릿을 치환할 수 있도록 항상 보관해둔다.
+      filters[INTERNAL_SEARCH_TERM_KEY] = term;
     }
     return { filters, numOfRows: dsl.limit ?? 50, page: 1 };
   }
@@ -51,10 +60,11 @@ export class CustomApiConnector implements ApiConnector {
       }
     }
     for (const [key, value] of Object.entries(params.filters ?? {})) {
+      if (key === INTERNAL_SEARCH_TERM_KEY) continue;
       if (value !== undefined && value !== "") url.searchParams.set(key, String(value));
     }
 
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = parseHeaderLines(this.config.extraHeaders);
     const authValue = this.config.authValue?.trim() ?? "";
     if (this.config.authType === "query" && this.config.authKeyName && authValue) {
       url.searchParams.set(this.config.authKeyName, normalizeServiceKey(authValue));
@@ -64,7 +74,17 @@ export class CustomApiConnector implements ApiConnector {
       headers["Authorization"] = `Bearer ${authValue}`;
     }
 
-    const rawText = await this.apiClient.get(url.toString(), { headers });
+    const method = this.config.httpMethod ?? "GET";
+    let rawText: string;
+    if (method === "POST") {
+      const searchTerm = params.filters?.[INTERNAL_SEARCH_TERM_KEY];
+      const body = buildRequestBody(this.config.requestBodyTemplate, searchTerm);
+      if (body && !hasHeader(headers, "content-type")) headers["Content-Type"] = "application/json";
+      rawText = await this.apiClient.post(url.toString(), body ?? "", { headers });
+    } else {
+      rawText = await this.apiClient.get(url.toString(), { headers });
+    }
+
     try {
       return JSON.parse(rawText);
     } catch {
@@ -84,6 +104,35 @@ export class CustomApiConnector implements ApiConnector {
       totalCount: rows.length,
     };
   }
+}
+
+/** "Key: Value" 형식(한 줄에 하나)의 텍스트를 헤더 객체로 파싱한다. 빈 줄/콜론 없는 줄은 무시한다. */
+function parseHeaderLines(text?: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  if (!text) return result;
+  for (const line of text.split("\n")) {
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    const value = line.slice(idx + 1).trim();
+    if (key) result[key] = value;
+  }
+  return result;
+}
+
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  return Object.keys(headers).some((k) => k.toLowerCase() === name.toLowerCase());
+}
+
+/**
+ * POST 본문 템플릿의 "{{query}}" 자리에 검색어를 안전하게(JSON 문자열 이스케이프)
+ * 치환한다. 템플릿이 없으면 undefined를 반환해 빈 본문으로 요청한다.
+ */
+function buildRequestBody(template: string | undefined, searchTerm: unknown): string | undefined {
+  const trimmed = template?.trim();
+  if (!trimmed) return undefined;
+  const escaped = searchTerm === undefined ? "" : JSON.stringify(String(searchTerm)).slice(1, -1);
+  return trimmed.replace(/\{\{\s*query\s*\}\}/g, escaped);
 }
 
 const MAX_SEARCH_DEPTH = 6;

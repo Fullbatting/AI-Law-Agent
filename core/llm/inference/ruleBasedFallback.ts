@@ -55,9 +55,9 @@ export class RuleBasedFallbackRuntime implements SlmRuntime {
    *    — 사용자가 "OO API로 찾아줘"처럼 직접 지정한 것과 동일한 효과라
    *    자동 분류와 수동 지정을 자연스럽게 합친다.
    * 2) 법령 관련 키워드가 있으면 법제처로 보낸다.
-   * 3) 그 외엔 등록된 커스텀 API들의 이름+설명과 질문의 단어 겹침 점수가
-   *    가장 높은 것을 고른다(뚜렷하게 겹치는 게 있을 때만 — 애매하면
-   *    잘못 추측하는 대신 3순위로 밀어둔다).
+   * 3) 그 외엔 등록된 커스텀 API들의 이름+설명(+등록해둔 예시 질문, 가중치 2배)과
+   *    질문의 단어 겹침 점수가 가장 높은 것을 고른다(뚜렷하게 겹치는 게 있을
+   *    때만 — 애매하면 잘못 추측하는 대신 3순위로 밀어둔다).
    * 4) 그래도 없으면 기본값인 병원 검색으로 처리한다.
    * 실제 GGUF 모델이 로드되어 있으면 이 규칙 대신 모델이 시스템 프롬프트에
    * 나열된 모든 소스(커스텀 API 포함, core/tools/registry.ts describeForPrompt
@@ -187,19 +187,27 @@ function tokenize(text: string): string[] {
 }
 
 /**
- * 등록된 커스텀 API 중 질문과 이름+설명의 단어가 가장 많이 겹치는 것을 고른다.
- * 겹치는 단어가 최소 2개 이상일 때만 채택한다 — 1개만 우연히 겹쳐도 채택하면
- * 상관없는 질문을 엉뚱한 API로 잘못 보낼 위험이 커지기 때문이다.
+ * 등록된 커스텀 API 중 질문과 이름+설명+예시 질문의 단어가 가장 많이 겹치는
+ * 것을 고른다. 사용자가 직접 적어둔 "예시 질문"(exampleQuestions)의 단어는
+ * 이름/설명보다 신뢰도가 높은 신호라고 보고 가중치를 2배로 준다. 총 점수가
+ * 최소 2 이상일 때만 채택한다 — 애매하게 1점만 겹쳐도 채택하면 상관없는
+ * 질문을 엉뚱한 API로 잘못 보낼 위험이 커지기 때문이다.
  */
 function bestMatchingCustomApi(userText: string, customApis: CustomApiConfig[]): CustomApiConfig | null {
   if (customApis.length === 0) return null;
   const questionTokens = new Set(tokenize(userText));
   if (questionTokens.size === 0) return null;
 
+  const EXAMPLE_QUESTION_WEIGHT = 2;
+
   let best: { api: CustomApiConfig; score: number } | null = null;
   for (const api of customApis) {
-    const corpus = `${api.name} ${api.description ?? ""}`;
-    const score = tokenize(corpus).filter((token) => questionTokens.has(token)).length;
+    const baseCorpus = `${api.name} ${api.description ?? ""}`;
+    const baseScore = tokenize(baseCorpus).filter((token) => questionTokens.has(token)).length;
+    const exampleCorpus = (api.exampleQuestions ?? []).join(" ");
+    const exampleScore =
+      tokenize(exampleCorpus).filter((token) => questionTokens.has(token)).length * EXAMPLE_QUESTION_WEIGHT;
+    const score = baseScore + exampleScore;
     if (score > 0 && (!best || score > best.score)) best = { api, score };
   }
   return best && best.score >= 2 ? best.api : null;

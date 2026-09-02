@@ -28,6 +28,21 @@ export interface CustomApiConfig {
   searchParamName?: string;
   /** 항상 붙일 고정 쿼리 파라미터. "key=value&key2=value2" 형식 */
   extraQueryParams?: string;
+  /** 기본값 GET. 검색을 POST로만 지원하는 API를 등록할 수 있게 한다. */
+  httpMethod?: "GET" | "POST";
+  /**
+   * httpMethod가 POST일 때 보낼 JSON 요청 본문 템플릿. "{{query}}" 자리에
+   * 사용자의 검색어가 안전하게 이스케이프되어 치환된다. 예: {"keyword": "{{query}}"}
+   */
+  requestBodyTemplate?: string;
+  /** 인증 헤더 외에 항상 붙일 추가 헤더. 한 줄에 하나, "Key: Value" 형식 */
+  extraHeaders?: string;
+  /**
+   * 이 API가 답할 수 있는 질문 예시. 이름/설명만으로 부족할 때 자연어 질문을
+   * 어느 API로 보낼지 인식하는 정확도를 높이는 힌트로 쓰인다
+   * (core/tools/registry.ts, core/llm/inference/ruleBasedFallback.ts 참고).
+   */
+  exampleQuestions?: string[];
 }
 
 export interface AppSettings {

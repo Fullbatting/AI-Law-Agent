@@ -89,4 +89,28 @@ describe("SettingsManager 커스텀 API CRUD", () => {
     manager.update({ hiraServiceKey: "K" });
     expect(manager.get()).toEqual({ hiraServiceKey: "K" });
   });
+
+  it("범용 등록에 필요한 확장 필드(POST/헤더/예시 질문)를 그대로 저장한다", () => {
+    const manager = new SettingsManager(settingsPath);
+    const added = manager.addCustomApi({
+      name: "환율 API",
+      baseUrl: "https://api.exchange.example.com/rate",
+      authType: "header",
+      authKeyName: "X-API-Key",
+      authValue: "KEY",
+      httpMethod: "POST",
+      requestBodyTemplate: '{"currency": "{{query}}"}',
+      extraHeaders: "Accept: application/json",
+      exampleQuestions: ["오늘 원달러 환율 알려줘", "엔화 환율 알려줘"],
+    });
+
+    const reloaded = new SettingsManager(settingsPath).getCustomApis()[0];
+    expect(reloaded).toMatchObject({
+      id: added.id,
+      httpMethod: "POST",
+      requestBodyTemplate: '{"currency": "{{query}}"}',
+      extraHeaders: "Accept: application/json",
+      exampleQuestions: ["오늘 원달러 환율 알려줘", "엔화 환율 알려줘"],
+    });
+  });
 });

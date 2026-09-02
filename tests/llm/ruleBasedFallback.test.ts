@@ -95,4 +95,35 @@ describe("RuleBasedFallbackRuntime.complete — 커스텀 API 자동 라우팅",
     );
     expect(plan.queries[0].source).toBe("law");
   });
+
+  it("이름/설명만으로는 겹치지 않아도 등록해둔 예시 질문과 겹치면 그 API로 라우팅한다", async () => {
+    const exchangeApi: CustomApiConfig = {
+      id: "exchange1",
+      name: "환율정보API",
+      baseUrl: "https://apis.data.go.kr/exchange",
+      authType: "query",
+      description: "금융 데이터 제공", // 질문과 겹치는 단어가 없다
+      exampleQuestions: ["오늘 원달러 환율 알려줘"],
+    };
+    const runtime = new RuleBasedFallbackRuntime(() => [exchangeApi]);
+    const plan: QueryPlan = JSON.parse(
+      await runtime.complete({ system: "", prompt: "", userText: "오늘 원달러 환율 알려줘" })
+    );
+    expect(plan.queries[0].source).toBe("custom:exchange1");
+  });
+
+  it("(대조군) 같은 API에 예시 질문이 없으면 이름/설명만으로는 라우팅되지 않는다", async () => {
+    const exchangeApiNoExamples: CustomApiConfig = {
+      id: "exchange1",
+      name: "환율정보API",
+      baseUrl: "https://apis.data.go.kr/exchange",
+      authType: "query",
+      description: "금융 데이터 제공",
+    };
+    const runtime = new RuleBasedFallbackRuntime(() => [exchangeApiNoExamples]);
+    const plan: QueryPlan = JSON.parse(
+      await runtime.complete({ system: "", prompt: "", userText: "오늘 원달러 환율 알려줘" })
+    );
+    expect(plan.queries[0].source).toBe("hira");
+  });
 });

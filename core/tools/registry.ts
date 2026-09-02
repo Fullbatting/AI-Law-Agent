@@ -49,10 +49,15 @@ export class ToolRegistry {
   /** SLM 프롬프트에 넣을 수 있는 사람이 읽을 수 있는 Tool 설명 목록 */
   describeForPrompt(): string {
     return this.list()
-      .map(
-        (c) =>
-          `- ${c.name} (source="${c.source}", entity="${c.entity}"): ${c.description}`
-      )
+      .map((c) => {
+        let line = `- ${c.name} (source="${c.source}", entity="${c.entity}"): ${c.description}`;
+        // 사용자가 등록한 예시 질문이 있으면 함께 보여줘 SLM이 이 Tool을
+        // 언제 골라야 하는지 더 정확히 판단하게 한다.
+        if (c.exampleQuestions && c.exampleQuestions.length > 0) {
+          line += `\n  예시 질문: ${c.exampleQuestions.join(" / ")}`;
+        }
+        return line;
+      })
       .join("\n");
   }
 }

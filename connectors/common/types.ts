@@ -18,6 +18,13 @@ export interface ApiConnector {
   readonly sourceLabel: string;
   /** 원본 API 응답 검증용 Zod 스키마 (선택) */
   readonly responseSchema?: z.ZodTypeAny;
+  /**
+   * 이 Connector가 답할 수 있는 질문 예시. SLM 시스템 프롬프트(모델이 있을 때)와
+   * 규칙 기반 폴백의 키워드 매칭(모델이 없을 때) 양쪽에서 "이 질문을 어느
+   * API로 보낼지" 인식 정확도를 높이는 힌트로 쓰인다 (core/tools/registry.ts
+   * describeForPrompt, core/llm/inference/ruleBasedFallback.ts 참고).
+   */
+  readonly exampleQuestions?: string[];
 
   /** QueryDSL을 이 Connector가 이해하는 요청 파라미터로 변환한다 */
   buildParams(dsl: QueryDSL): ConnectorRequestParams;
@@ -32,6 +39,10 @@ export interface ApiConnector {
 export interface ApiClientOptions {
   timeoutMs?: number;
   retries?: number;
-  /** 커스텀 API의 헤더 기반 인증(header/bearer)에 쓰인다 */
+  /** 커스텀 API의 헤더 기반 인증(header/bearer) 및 그 외 고정 헤더에 쓰인다 */
   headers?: Record<string, string>;
+  /** 기본값 GET. 커스텀 API가 POST로만 검색을 지원하는 경우 등에 쓴다 */
+  method?: "GET" | "POST";
+  /** method가 POST일 때 보낼 요청 본문(문자열, 보통 JSON) */
+  body?: string;
 }

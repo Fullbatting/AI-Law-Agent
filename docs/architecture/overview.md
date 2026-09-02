@@ -88,7 +88,7 @@ Query Planner/Tool Router 이하 코드는 어떤 런타임이 실제로 쓰이�
 | `core/conversation` | 대화/메시지/API 호출 이력 저장 및 삭제 | 11장 |
 | `core/export` | Excel/CSV 내보내기 | 9장, 13장 |
 | `connectors/hira`, `connectors/law` | 실제 공공 API 호출 및 정규화 | 4장, 7장, 8장 |
-| `connectors/generic/customApiConnector.ts` | 사용자가 설정 화면에서 등록한 임의의(범용) API용 Connector. 필드별 매핑 코드 없이 "검색어 하나 + 고정 파라미터"로 호출하고, 응답에서 배열처럼 보이는 부분을 찾아 표로 정규화하는 휴리스틱을 쓴다 | 4장, 6장 |
+| `connectors/generic/customApiConnector.ts` | 사용자가 설정 화면에서 등록한 임의의(범용) API용 Connector. 필드별 매핑 코드 없이 GET/POST, 쿼리·헤더·Bearer 인증, 추가 헤더, POST 본문 템플릿까지 지원해 "검색어 하나 + 고정 파라미터/헤더/본문"으로 호출하고, 응답에서 배열처럼 보이는 부분을 찾아 표로 정규화하는 휴리스틱을 쓴다. 등록 시 받는 `exampleQuestions`(예시 질문)는 라우팅 인식 정확도를 높이는 힌트다 | 4장, 6장 |
 | `connectors/common` | 공용 HTTP 클라이언트, XML/JSON 파서, 응답 검증 | 4장 |
 | `data/dictionaries` | 지역명·기관코드 등 자연어 ↔ API 코드 매핑 테이블 | 8장 |
 | `data/schemas` | Connector별 원본/정규화 데이터 Zod 스키마 | 25장 |

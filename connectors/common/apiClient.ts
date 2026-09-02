@@ -4,13 +4,25 @@ import type { ApiClientOptions } from "./types";
  * 공용 HTTP 클라이언트.
  * - 모든 외부 API 호출은 이 클라이언트를 거친다 (fetch/undici 기반).
  * - Timeout, 재시도(retry)를 공통으로 처리한다 (기술기획서 25장 "API 장애" 대응).
+ * - GET이 기본이지만, POST로만 검색을 지원하는 API도 등록할 수 있도록
+ *   request()로 method/body를 지정할 수 있다(connectors/generic/customApiConnector.ts 참고).
  */
 export class ApiClient {
   constructor(private readonly defaults: ApiClientOptions = {}) {}
 
   async get(url: string, options: ApiClientOptions = {}): Promise<string> {
+    return this.request(url, { ...options, method: "GET" });
+  }
+
+  async post(url: string, body: string, options: ApiClientOptions = {}): Promise<string> {
+    return this.request(url, { ...options, method: "POST", body });
+  }
+
+  async request(url: string, options: ApiClientOptions = {}): Promise<string> {
     const timeoutMs = options.timeoutMs ?? this.defaults.timeoutMs ?? 10_000;
     const retries = options.retries ?? this.defaults.retries ?? 2;
+    const method = options.method ?? this.defaults.method ?? "GET";
+    const body = options.body ?? this.defaults.body;
 
     let lastError: unknown;
     for (let attempt = 0; attempt <= retries; attempt++) {
@@ -19,6 +31,8 @@ export class ApiClient {
       try {
         const headers = { ...this.defaults.headers, ...options.headers };
         const res = await fetch(url, {
+          method,
+          body,
           signal: controller.signal,
           headers: Object.keys(headers).length > 0 ? headers : undefined,
         });
@@ -28,8 +42,8 @@ export class ApiClient {
           // API는 4xx/5xx여도 본문에 구체적인 사유(errMsg 등)를 담아 돌려주는
           // 경우가 많은데, 본문을 읽지 않으면 "HTTP 403 Forbidden"처럼
           // 원인을 알 수 없는 메시지만 남아 사용자가 다음 조치를 알 수 없다.
-          const body = await res.text().catch(() => "");
-          throw new ApiRequestError(`HTTP ${res.status} ${res.statusText}`, res.status, url, body);
+          const errBody = await res.text().catch(() => "");
+          throw new ApiRequestError(`HTTP ${res.status} ${res.statusText}`, res.status, url, errBody);
         }
         return await res.text();
       } catch (err) {
