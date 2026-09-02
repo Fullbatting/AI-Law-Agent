@@ -17,6 +17,23 @@ if not exist "node_modules" (
     goto :end
 )
 
+rem Catch this specific, common failure before trying to launch, so the
+rem error message points at the real cause (Electron's own binary failed to
+rem download) instead of the generic message below, which does not apply
+rem to this situation.
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo [ERROR] Electron did not install correctly -
+    echo         node_modules\electron\dist\electron.exe is missing.
+    echo         This means Electron could not download its own program
+    echo         during setup - it is not a bug in this app.
+    echo.
+    echo         Fix: run install.bat again. It will retry the Electron
+    echo         download automatically. If it keeps failing, antivirus or a
+    echo         company firewall/VPN is likely blocking the download -
+    echo         temporarily disable it and try install.bat again.
+    goto :end
+)
+
 if not exist ".env" (
     echo [WARNING] No .env file found. Run install.bat first, or copy
     echo           .env.example to .env and fill in your API keys.

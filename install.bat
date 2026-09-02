@@ -62,6 +62,37 @@ if errorlevel 1 (
 )
 echo.
 
+rem 3b) Verify Electron's own binary actually downloaded. npm install can
+rem report success overall while Electron's separate download step silently
+rem failed (antivirus, corporate proxy/firewall, or a dropped connection are
+rem the usual causes) - this is not a problem with this app's code. Retry it
+rem once automatically before bothering the user: install.js is safe to
+rem run again, it exits immediately if Electron is already installed.
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo [WARNING] Electron's own binary did not download during npm install.
+    echo           Retrying the Electron download...
+    call node node_modules\electron\install.js
+    echo.
+)
+if not exist "node_modules\electron\dist\electron.exe" (
+    echo [ERROR] Electron still did not install correctly.
+    echo         node_modules\electron\dist\electron.exe is missing. This means
+    echo         Electron could not download its own program from the internet -
+    echo         it is not a bug in this app.
+    echo.
+    echo         Common causes and fixes:
+    echo           - Antivirus or a company firewall blocked the download.
+    echo             Temporarily disable it, or ask your IT team to allow
+    echo             github.com and githubusercontent.com.
+    echo           - A VPN or proxy interrupted the connection. Try again with
+    echo             it turned off.
+    echo           - The download was interrupted. Delete the node_modules
+    echo             folder completely and run install.bat again.
+    goto :end
+)
+echo [OK] Electron installed correctly.
+echo.
+
 rem 4) Prepare the .env file
 if not exist ".env" (
     if exist ".env.example" (

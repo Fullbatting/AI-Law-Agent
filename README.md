@@ -104,6 +104,13 @@ GGUF 모델을 **Electron 프로세스 안에서 직접** 구동한다. 별도�
 - 그래도 원인을 알 수 없다면 `Win+R` → `cmd` → 압축 푼 폴더로 `cd` 이동 →
   `install.bat` 을 직접 입력해 실행하면, 창이 사용자가 직접 연 것이라 어떤
   경우에도 닫히지 않고 전체 로그를 확인할 수 있다.
+- `run.bat` 실행 시 `Electron failed to install correctly`(또는
+  `node_modules\electron\dist\electron.exe is missing`) 오류가 뜨면, 이 앱의
+  코드 문제가 아니라 `npm install` 도중 **Electron이 자기 실행파일을
+  GitHub에서 내려받는 데 실패**한 것이다(백신/사내 방화벽/VPN이 흔한
+  원인). `install.bat`을 다시 실행하면 이 다운로드를 자동으로 한 번 더
+  시도하고, 그래도 안 되면 백신·VPN을 잠시 끄고 다시 시도하거나
+  `node_modules` 폴더를 통째로 지우고 `install.bat`부터 다시 실행한다.
 
 `install.bat`/`run.bat`/`scripts\build-installer.bat`은 의도적으로 **순수
 ASCII, 영어 안내문만** 쓴다 — 앱 자체는 계속 한글이지만, 배치파일에 한글을
